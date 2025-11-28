@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { User, Lock, Mail, ArrowRight, Loader2 } from 'lucide-react';
 
-const API_BASE_URL = 'http://localhost:8080';
+const API_BASE_URL = 'https://hackathon-backend-1093557143473.us-central1.run.app';
 
 interface AuthProps {
     onLoginSuccess: (token: string, user: any) => void;
