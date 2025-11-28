@@ -1,19 +1,18 @@
 import React, { useEffect, useState } from 'react';
-import AiRepairShop from './AiRepairShop'; // ★これをSellタブに移動させます
-// AiGeneratorは削除済み
+import AiRepairShop from './AiRepairShop';
 import DigitalCertificate from './DigitalCertificate';
 import CraftsmanChat from './CraftsmanChat';
 import Auth from './Auth';
 import SellItem from './SellItem';
-import { ShoppingBag, RefreshCw, ChevronRight, MessageCircle, Shield, LogOut, Plus, Wrench } from 'lucide-react';
+import TradeChat from './TradeChat'; // ★追加：チャット機能をインポート
+import { ShoppingBag, RefreshCw, ChevronRight, MessageCircle, Shield, LogOut, Plus, Wrench, MessageSquareText } from 'lucide-react';
 
-// Cloud RunのURL（あなたの環境のURL）
+// Cloud RunのURL
 const API_BASE_URL = 'https://hackathon-backend-1093557143473.us-central1.run.app';
 
 // --- 型定義 ---
 interface Item { id: string; name: string; price: number; description: string; sold_out: boolean; has_certificate?: boolean; }
 
-// ダミーデータ
 const MOCK_ITEMS: Item[] = [
     {
         id: 'mock-1',
@@ -42,7 +41,8 @@ const MOCK_ITEMS: Item[] = [
 
 function App() {
     const [items, setItems] = useState<Item[]>([]);
-    const [showChat, setShowChat] = useState(false);
+    const [showSupportChat, setShowSupportChat] = useState(false); // 運営サポートチャット
+    const [selectedItemForChat, setSelectedItemForChat] = useState<Item | null>(null); // ★追加：取引チャット用
 
     // 認証・画面遷移の状態管理
     const [user, setUser] = useState<any>(null);
@@ -75,7 +75,8 @@ function App() {
     const handleLogout = () => {
         setToken(null);
         setUser(null);
-        setShowChat(false);
+        setShowSupportChat(false);
+        setSelectedItemForChat(null);
         setView('home');
     };
 
@@ -94,11 +95,7 @@ function App() {
             {/* ヘッダー */}
             <header className="sticky top-0 z-50 bg-stone-50/90 backdrop-blur-sm border-b border-stone-200">
                 <div className="max-w-5xl mx-auto px-6 h-20 flex items-center justify-between">
-                    {/* ロゴ：クリックでホームへ */}
-                    <div
-                        className="flex items-center gap-3 cursor-pointer"
-                        onClick={() => setView('home')}
-                    >
+                    <div className="flex items-center gap-3 cursor-pointer" onClick={() => setView('home')}>
                         <div className="text-stone-800 p-1 border border-stone-800 rounded-sm">
                             <RefreshCw className="w-4 h-4" />
                         </div>
@@ -112,7 +109,6 @@ function App() {
                             Welcome, {user?.name}
                         </span>
 
-                        {/* 出品タブ切り替えボタン */}
                         <button
                             onClick={() => setView('sell')}
                             className={`flex items-center gap-2 px-4 py-2 border rounded-sm transition-colors ${view === 'sell' ? 'bg-stone-800 text-white border-stone-800' : 'bg-white border-stone-300 hover:border-stone-800'}`}
@@ -121,7 +117,7 @@ function App() {
                             <span className="text-xs font-bold tracking-widest uppercase">Sell</span>
                         </button>
 
-                        <button onClick={() => setShowChat(!showChat)} className="flex items-center gap-2 hover:text-stone-900 transition-colors">
+                        <button onClick={() => setShowSupportChat(!showSupportChat)} className="flex items-center gap-2 hover:text-stone-900 transition-colors">
                             <MessageCircle className="w-4 h-4" />
                             <span className="hidden md:inline">Support</span>
                         </button>
@@ -135,12 +131,17 @@ function App() {
 
             <main className="max-w-4xl mx-auto px-6 py-16 space-y-24">
 
-                {/* ▼▼▼ 画面切り替え ▼▼▼ */}
-                {view === 'sell' ? (
-                    /* === 出品モード（Sell Tab） === */
-                    <div className="space-y-20 animate-in fade-in duration-500">
+                {/* ★ 取引チャット（モーダル）表示ロジック */}
+                {selectedItemForChat && (
+                    <TradeChat
+                        item={selectedItemForChat}
+                        onClose={() => setSelectedItemForChat(null)}
+                    />
+                )}
 
-                        {/* 1. AI鑑定（修復プラン＆市場価値） */}
+                {view === 'sell' ? (
+                    /* === 出品モード === */
+                    <div className="space-y-20 animate-in fade-in duration-500">
                         <section className="bg-white p-8 rounded-lg shadow-sm border border-stone-100">
                             <div className="flex items-center gap-3 mb-6 pb-4 border-b border-stone-100">
                                 <div className="bg-indigo-50 p-2 rounded-full text-indigo-600">
@@ -154,7 +155,6 @@ function App() {
                             <AiRepairShop />
                         </section>
 
-                        {/* 2. 出品フォーム */}
                         <section className="relative">
                             <div className="absolute -top-10 left-1/2 -translate-x-1/2 bg-stone-200 text-stone-500 text-[10px] px-3 py-1 rounded-full uppercase tracking-widest">
                                 Step 2
@@ -163,20 +163,19 @@ function App() {
                         </section>
                     </div>
                 ) : (
-                    /* === ホームモード（Buying Tab） === */
+                    /* === ホームモード === */
                     <>
-                        {/* チャットサポート */}
-                        {showChat && (
+                        {/* 運営サポートチャット */}
+                        {showSupportChat && (
                             <div className="fixed bottom-24 right-6 z-50 w-80 shadow-2xl animate-in slide-in-from-bottom-10 border border-stone-200 rounded-lg overflow-hidden">
                                 <div className="bg-stone-800 text-white p-2 flex justify-between items-center">
                                     <span className="text-xs font-bold tracking-widest pl-2">CRAFTSMAN SUPPORT</span>
-                                    <button onClick={() => setShowChat(false)} className="px-2 hover:text-stone-300">×</button>
+                                    <button onClick={() => setShowSupportChat(false)} className="px-2 hover:text-stone-300">×</button>
                                 </div>
                                 <CraftsmanChat />
                             </div>
                         )}
 
-                        {/* 商品一覧エリア */}
                         <section>
                             <div className="flex items-end justify-between mb-8">
                                 <div>
@@ -200,10 +199,9 @@ function App() {
                                                     <Shield className="w-3 h-3" /> Verified
                                                 </div>
                                             )}
-                                            <div className="absolute inset-0 bg-stone-900/5 opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
 
                                             {item.sold_out && (
-                                                <div className="absolute inset-0 bg-stone-50/80 flex items-center justify-center">
+                                                <div className="absolute inset-0 bg-stone-50/80 flex items-center justify-center z-10">
                                                     <span className="text-stone-400 tracking-widest text-sm border border-stone-400 px-3 py-1">SOLD OUT</span>
                                                 </div>
                                             )}
@@ -225,23 +223,38 @@ function App() {
                                                 </div>
                                             )}
 
-                                            <button
-                                                onClick={() => handlePurchase(item)}
-                                                disabled={item.sold_out}
-                                                className={`
-                                                    w-full mt-auto py-3 text-xs tracking-widest border transition-all duration-300 flex items-center justify-center gap-2
-                                                    ${item.sold_out
-                                                    ? 'border-stone-200 text-stone-300 cursor-not-allowed'
-                                                    : 'border-stone-300 text-stone-600 hover:bg-stone-800 hover:text-white hover:border-stone-800'
-                                                }
-                                                `}
-                                            >
-                                                {item.sold_out ? '売り切れ' : (
-                                                    <>
-                                                        購入手続きへ <ChevronRight className="w-3 h-3" />
-                                                    </>
-                                                )}
-                                            </button>
+                                            {/* ★ ボタンエリア：チャット機能を追加 */}
+                                            <div className="mt-auto flex gap-2">
+                                                <button
+                                                    onClick={() => setSelectedItemForChat(item)}
+                                                    disabled={item.sold_out}
+                                                    className={`
+                                                        p-3 border border-stone-200 text-stone-600 hover:bg-stone-50 hover:text-stone-800 transition-colors
+                                                        ${item.sold_out ? 'opacity-50 cursor-not-allowed' : ''}
+                                                    `}
+                                                    title="出品者とチャット（値下げ交渉など）"
+                                                >
+                                                    <MessageSquareText className="w-4 h-4" />
+                                                </button>
+
+                                                <button
+                                                    onClick={() => handlePurchase(item)}
+                                                    disabled={item.sold_out}
+                                                    className={`
+                                                        flex-1 py-3 text-xs tracking-widest border transition-all duration-300 flex items-center justify-center gap-2
+                                                        ${item.sold_out
+                                                        ? 'border-stone-200 text-stone-300 cursor-not-allowed'
+                                                        : 'border-stone-300 text-stone-600 hover:bg-stone-800 hover:text-white hover:border-stone-800'
+                                                    }
+                                                    `}
+                                                >
+                                                    {item.sold_out ? '売り切れ' : (
+                                                        <>
+                                                            購入へ <ChevronRight className="w-3 h-3" />
+                                                        </>
+                                                    )}
+                                                </button>
+                                            </div>
                                         </div>
                                     </div>
                                 ))}
