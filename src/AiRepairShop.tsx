@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { Camera, ArrowRight, Check, Loader2 } from 'lucide-react';
 
-const API_BASE_URL = 'http://localhost:8080';
+const API_BASE_URL = 'https://hackathon-backend-1093557143473.us-central1.run.app';
 
 const AiRepairShop = () => {
     const [loading, setLoading] = useState(false);

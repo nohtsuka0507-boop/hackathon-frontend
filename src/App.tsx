@@ -8,7 +8,7 @@ import Auth from './Auth'; // ★ 新しく作った認証画面をインポー�
 import SellItem from './SellItem'; // ★ インポート追加
 import { ShoppingBag, RefreshCw, ChevronRight, MessageCircle, Shield, LogOut, Plus } from 'lucide-react';
 
-const API_BASE_URL = 'http://localhost:8080';
+const API_BASE_URL = 'https://hackathon-backend-1093557143473.us-central1.run.app';
 
 // --- 型定義 ---
 interface Item { id: string; name: string; price: number; description: string; sold_out: boolean; has_certificate?: boolean; }
