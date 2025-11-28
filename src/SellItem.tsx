@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { Camera, Sparkles, Tag, DollarSign, Upload, Loader2, X } from 'lucide-react';
 
-const API_BASE_URL = 'http://localhost:8080';
+const API_BASE_URL = 'https://hackathon-backend-1093557143473.us-central1.run.app';
 
 const SellItem = () => {
     const [loading, setLoading] = useState(false);
