@@ -1,19 +1,19 @@
 import React, { useEffect, useState } from 'react';
-import AiRepairShop from './AiRepairShop';
-// AiGeneratorは不要になったので削除しました
+import AiRepairShop from './AiRepairShop'; // ★これをSellタブに移動させます
+// AiGeneratorは削除済み
 import DigitalCertificate from './DigitalCertificate';
 import CraftsmanChat from './CraftsmanChat';
 import Auth from './Auth';
 import SellItem from './SellItem';
-import { ShoppingBag, RefreshCw, ChevronRight, MessageCircle, Shield, LogOut, Plus } from 'lucide-react';
+import { ShoppingBag, RefreshCw, ChevronRight, MessageCircle, Shield, LogOut, Plus, Wrench } from 'lucide-react';
 
-// Cloud RunのURL（あなたの環境のURLです）
+// Cloud RunのURL（あなたの環境のURL）
 const API_BASE_URL = 'https://hackathon-backend-1093557143473.us-central1.run.app';
 
 // --- 型定義 ---
 interface Item { id: string; name: string; price: number; description: string; sold_out: boolean; has_certificate?: boolean; }
 
-// ダミーデータ（通信失敗時用）
+// ダミーデータ
 const MOCK_ITEMS: Item[] = [
     {
         id: 'mock-1',
@@ -47,7 +47,7 @@ function App() {
     // 認証・画面遷移の状態管理
     const [user, setUser] = useState<any>(null);
     const [token, setToken] = useState<string | null>(null);
-    const [view, setView] = useState<'home' | 'sell'>('home'); // 'home'か'sell'で画面を切り替え
+    const [view, setView] = useState<'home' | 'sell'>('home');
 
     const fetchItems = async () => {
         try {
@@ -67,13 +67,11 @@ function App() {
         }
     };
 
-    // ログイン成功時の処理
     const handleLoginSuccess = (token: string, userData: any) => {
         setToken(token);
         setUser(userData);
     };
 
-    // ログアウト処理
     const handleLogout = () => {
         setToken(null);
         setUser(null);
@@ -85,7 +83,6 @@ function App() {
         if (token) fetchItems();
     }, [token]);
 
-    // 未ログインなら認証画面を表示
     if (!token) {
         return <Auth onLoginSuccess={handleLoginSuccess} />;
     }
@@ -94,10 +91,10 @@ function App() {
     return (
         <div className="min-h-screen bg-stone-50 text-stone-800 font-sans pb-24 selection:bg-stone-200 relative">
 
-            {/* ヘッダー（ナビゲーションバー） */}
+            {/* ヘッダー */}
             <header className="sticky top-0 z-50 bg-stone-50/90 backdrop-blur-sm border-b border-stone-200">
                 <div className="max-w-5xl mx-auto px-6 h-20 flex items-center justify-between">
-                    {/* ロゴ：クリックでホーム（買う画面）へ */}
+                    {/* ロゴ：クリックでホームへ */}
                     <div
                         className="flex items-center gap-3 cursor-pointer"
                         onClick={() => setView('home')}
@@ -110,13 +107,12 @@ function App() {
                         </h1>
                     </div>
 
-                    {/* 右側のメニュー */}
                     <nav className="flex items-center gap-6 text-sm tracking-wide text-stone-600">
                         <span className="text-[10px] text-stone-400 uppercase tracking-wider hidden md:inline">
                             Welcome, {user?.name}
                         </span>
 
-                        {/* 出品ボタン：クリックで出品画面へ */}
+                        {/* 出品タブ切り替えボタン */}
                         <button
                             onClick={() => setView('sell')}
                             className={`flex items-center gap-2 px-4 py-2 border rounded-sm transition-colors ${view === 'sell' ? 'bg-stone-800 text-white border-stone-800' : 'bg-white border-stone-300 hover:border-stone-800'}`}
@@ -139,12 +135,35 @@ function App() {
 
             <main className="max-w-4xl mx-auto px-6 py-16 space-y-24">
 
-                {/* 画面切り替えロジック */}
+                {/* ▼▼▼ 画面切り替え ▼▼▼ */}
                 {view === 'sell' ? (
-                    /* 出品モードの時 */
-                    <SellItem />
+                    /* === 出品モード（Sell Tab） === */
+                    <div className="space-y-20 animate-in fade-in duration-500">
+
+                        {/* 1. AI鑑定（修復プラン＆市場価値） */}
+                        <section className="bg-white p-8 rounded-lg shadow-sm border border-stone-100">
+                            <div className="flex items-center gap-3 mb-6 pb-4 border-b border-stone-100">
+                                <div className="bg-indigo-50 p-2 rounded-full text-indigo-600">
+                                    <Wrench className="w-5 h-5" />
+                                </div>
+                                <div>
+                                    <h3 className="text-lg font-bold text-stone-800">AI Repair & Value Check</h3>
+                                    <p className="text-xs text-stone-500">出品前に、修復プランと適正価格をAIが診断します。</p>
+                                </div>
+                            </div>
+                            <AiRepairShop />
+                        </section>
+
+                        {/* 2. 出品フォーム */}
+                        <section className="relative">
+                            <div className="absolute -top-10 left-1/2 -translate-x-1/2 bg-stone-200 text-stone-500 text-[10px] px-3 py-1 rounded-full uppercase tracking-widest">
+                                Step 2
+                            </div>
+                            <SellItem />
+                        </section>
+                    </div>
                 ) : (
-                    /* ホーム（買い物）モードの時 */
+                    /* === ホームモード（Buying Tab） === */
                     <>
                         {/* チャットサポート */}
                         {showChat && (
@@ -157,28 +176,20 @@ function App() {
                             </div>
                         )}
 
-                        {/* リペア見積もり機能（買う人・直したい人用） */}
-                        <section>
-                            <AiRepairShop />
-                        </section>
-
                         {/* 商品一覧エリア */}
-                        <section className="pt-12 border-t border-stone-200">
+                        <section>
                             <div className="flex items-end justify-between mb-8">
                                 <div>
                                     <h3 className="text-xl font-normal text-stone-800 tracking-wide mb-1">
-                                        整えられたモノたち
+                                        Marketplace
                                     </h3>
-                                    <p className="text-sm text-stone-500">次の使い手のためにメンテナンスされた商品</p>
+                                    <p className="text-sm text-stone-500">メンテナンス済みの商品一覧</p>
                                 </div>
-                                <button className="text-sm border-b border-stone-800 pb-0.5 hover:opacity-60 transition-opacity">
-                                    すべて見る
-                                </button>
                             </div>
 
                             <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
                                 {items.map((item) => (
-                                    <div key={item.id} className="group bg-white flex flex-col h-full relative">
+                                    <div key={item.id} className="group bg-white flex flex-col h-full relative border border-stone-100 transition hover:shadow-lg">
                                         {/* 画像エリア */}
                                         <div className="aspect-square bg-stone-100 relative overflow-hidden mb-4 cursor-pointer">
                                             <div className="absolute inset-0 flex items-center justify-center text-stone-300">
@@ -199,7 +210,7 @@ function App() {
                                         </div>
 
                                         {/* 商品情報 */}
-                                        <div className="space-y-3 flex-1 flex flex-col">
+                                        <div className="p-4 pt-0 space-y-3 flex-1 flex flex-col">
                                             <div className="flex justify-between items-baseline">
                                                 <h4 className="text-sm font-medium text-stone-800 line-clamp-1">{item.name}</h4>
                                                 <span className="text-sm text-stone-600 font-normal">¥{item.price.toLocaleString()}</span>
