@@ -1,19 +1,19 @@
 import React, { useEffect, useState } from 'react';
 import AiRepairShop from './AiRepairShop';
-import AiGenerator from './AiGenerator';
-// エラー回避のため、ファイルがない場合はコメントアウトしてください
+// AiGeneratorは不要になったので削除しました
 import DigitalCertificate from './DigitalCertificate';
 import CraftsmanChat from './CraftsmanChat';
-import Auth from './Auth'; // ★ 新しく作った認証画面をインポート
-import SellItem from './SellItem'; // ★ インポート追加
+import Auth from './Auth';
+import SellItem from './SellItem';
 import { ShoppingBag, RefreshCw, ChevronRight, MessageCircle, Shield, LogOut, Plus } from 'lucide-react';
 
+// Cloud RunのURL（あなたの環境のURLです）
 const API_BASE_URL = 'https://hackathon-backend-1093557143473.us-central1.run.app';
 
 // --- 型定義 ---
 interface Item { id: string; name: string; price: number; description: string; sold_out: boolean; has_certificate?: boolean; }
 
-// ダミーデータ
+// ダミーデータ（通信失敗時用）
 const MOCK_ITEMS: Item[] = [
     {
         id: 'mock-1',
@@ -44,10 +44,10 @@ function App() {
     const [items, setItems] = useState<Item[]>([]);
     const [showChat, setShowChat] = useState(false);
 
-    // ★ 認証状態の管理（最初はnull＝未ログイン）
+    // 認証・画面遷移の状態管理
     const [user, setUser] = useState<any>(null);
     const [token, setToken] = useState<string | null>(null);
-    const [view, setView] = useState<'home' | 'sell'>('home'); // ★ 画面切り替え用State
+    const [view, setView] = useState<'home' | 'sell'>('home'); // 'home'か'sell'で画面を切り替え
 
     const fetchItems = async () => {
         try {
@@ -67,14 +67,13 @@ function App() {
         }
     };
 
-    // ★ ログイン成功時にAuthコンポーネントから呼ばれる関数
+    // ログイン成功時の処理
     const handleLoginSuccess = (token: string, userData: any) => {
         setToken(token);
         setUser(userData);
-        // 必要ならここでlocalStorageに保存すると、リロードしてもログイン維持できます
     };
 
-    // ★ ログアウト処理
+    // ログアウト処理
     const handleLogout = () => {
         setToken(null);
         setUser(null);
@@ -83,25 +82,25 @@ function App() {
     };
 
     useEffect(() => {
-        // ログインしている時だけアイテムを取得
         if (token) fetchItems();
     }, [token]);
 
-    // ★ ログインしていなければ、認証画面（Auth）を表示して終了
+    // 未ログインなら認証画面を表示
     if (!token) {
         return <Auth onLoginSuccess={handleLoginSuccess} />;
     }
 
-    // --- ここから下はログイン後に表示されるメイン画面 ---
+    // --- メイン画面 ---
     return (
         <div className="min-h-screen bg-stone-50 text-stone-800 font-sans pb-24 selection:bg-stone-200 relative">
 
-            {/* Header */}
+            {/* ヘッダー（ナビゲーションバー） */}
             <header className="sticky top-0 z-50 bg-stone-50/90 backdrop-blur-sm border-b border-stone-200">
                 <div className="max-w-5xl mx-auto px-6 h-20 flex items-center justify-between">
+                    {/* ロゴ：クリックでホーム（買う画面）へ */}
                     <div
                         className="flex items-center gap-3 cursor-pointer"
-                        onClick={() => setView('home')} // ロゴクリックでホームに戻る
+                        onClick={() => setView('home')}
                     >
                         <div className="text-stone-800 p-1 border border-stone-800 rounded-sm">
                             <RefreshCw className="w-4 h-4" />
@@ -110,13 +109,14 @@ function App() {
                             Re:Value
                         </h1>
                     </div>
+
+                    {/* 右側のメニュー */}
                     <nav className="flex items-center gap-6 text-sm tracking-wide text-stone-600">
-                        {/* ログインユーザー名表示 */}
                         <span className="text-[10px] text-stone-400 uppercase tracking-wider hidden md:inline">
                             Welcome, {user?.name}
                         </span>
 
-                        {/* ★ 出品ボタンを追加 */}
+                        {/* 出品ボタン：クリックで出品画面へ */}
                         <button
                             onClick={() => setView('sell')}
                             className={`flex items-center gap-2 px-4 py-2 border rounded-sm transition-colors ${view === 'sell' ? 'bg-stone-800 text-white border-stone-800' : 'bg-white border-stone-300 hover:border-stone-800'}`}
@@ -130,7 +130,6 @@ function App() {
                             <span className="hidden md:inline">Support</span>
                         </button>
 
-                        {/* ログアウトボタン */}
                         <button onClick={handleLogout} className="flex items-center gap-1 hover:text-red-500 transition-colors ml-2" title="ログアウト">
                             <LogOut className="w-4 h-4" />
                         </button>
@@ -140,14 +139,14 @@ function App() {
 
             <main className="max-w-4xl mx-auto px-6 py-16 space-y-24">
 
-                {/* ★ 画面切り替えロジック */}
+                {/* 画面切り替えロジック */}
                 {view === 'sell' ? (
+                    /* 出品モードの時 */
                     <SellItem />
                 ) : (
+                    /* ホーム（買い物）モードの時 */
                     <>
-                        {/* ホーム画面のコンテンツ */}
-
-                        {/* Chat Modal */}
+                        {/* チャットサポート */}
                         {showChat && (
                             <div className="fixed bottom-24 right-6 z-50 w-80 shadow-2xl animate-in slide-in-from-bottom-10 border border-stone-200 rounded-lg overflow-hidden">
                                 <div className="bg-stone-800 text-white p-2 flex justify-between items-center">
@@ -158,18 +157,12 @@ function App() {
                             </div>
                         )}
 
+                        {/* リペア見積もり機能（買う人・直したい人用） */}
                         <section>
                             <AiRepairShop />
                         </section>
 
-                        <section className="pt-12 border-t border-stone-200">
-                            <div className="text-center mb-10">
-                                <h3 className="text-lg font-normal text-stone-700 tracking-wide mb-2">言葉を整える</h3>
-                                <p className="text-sm text-stone-500">商品の魅力を、過不足なく伝えます。</p>
-                            </div>
-                            <AiGenerator />
-                        </section>
-
+                        {/* 商品一覧エリア */}
                         <section className="pt-12 border-t border-stone-200">
                             <div className="flex items-end justify-between mb-8">
                                 <div>
@@ -178,9 +171,9 @@ function App() {
                                     </h3>
                                     <p className="text-sm text-stone-500">次の使い手のためにメンテナンスされた商品</p>
                                 </div>
-                                <a href="#" className="text-sm border-b border-stone-800 pb-0.5 hover:opacity-60 transition-opacity">
+                                <button className="text-sm border-b border-stone-800 pb-0.5 hover:opacity-60 transition-opacity">
                                     すべて見る
-                                </a>
+                                </button>
                             </div>
 
                             <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
@@ -191,7 +184,6 @@ function App() {
                                             <div className="absolute inset-0 flex items-center justify-center text-stone-300">
                                                 <ShoppingBag className="w-12 h-12 stroke-1" />
                                             </div>
-                                            {/* 証明書ありバッジ */}
                                             {item.has_certificate && (
                                                 <div className="absolute top-2 left-2 bg-stone-800/80 backdrop-blur text-white text-[10px] px-2 py-1 rounded-sm flex items-center gap-1">
                                                     <Shield className="w-3 h-3" /> Verified
@@ -206,6 +198,7 @@ function App() {
                                             )}
                                         </div>
 
+                                        {/* 商品情報 */}
                                         <div className="space-y-3 flex-1 flex flex-col">
                                             <div className="flex justify-between items-baseline">
                                                 <h4 className="text-sm font-medium text-stone-800 line-clamp-1">{item.name}</h4>
@@ -215,14 +208,12 @@ function App() {
                                                 {item.description}
                                             </p>
 
-                                            {/* 証明書コンポーネントの表示 */}
                                             {item.has_certificate && (
                                                 <div className="mt-2 mb-2 scale-75 origin-left w-[130%] -ml-[15%]">
                                                     <DigitalCertificate itemName={item.name} date="2024.11.27" />
                                                 </div>
                                             )}
 
-                                            {/* 購入ボタン */}
                                             <button
                                                 onClick={() => handlePurchase(item)}
                                                 disabled={item.sold_out}
