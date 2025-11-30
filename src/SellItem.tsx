@@ -3,9 +3,16 @@ import { Camera, Sparkles, Tag, DollarSign, Upload, Loader2, X } from 'lucide-re
 
 const API_BASE_URL = 'https://hackathon-backend-1093557143473.us-central1.run.app';
 
-const SellItem = () => {
+// ★修正: 親コンポーネント(App)に出品完了を伝えるためのprops
+interface SellItemProps {
+    onComplete?: () => void;
+}
+
+const SellItem: React.FC<SellItemProps> = ({ onComplete }) => {
     const [loading, setLoading] = useState(false);
     const [preview, setPreview] = useState<string | null>(null);
+    const [imageBase64, setImageBase64] = useState<string>("");
+
     const [formData, setFormData] = useState({
         title: '',
         description: '',
@@ -14,19 +21,24 @@ const SellItem = () => {
         price: '',
     });
 
-    // 画像アップロード & AI分析
     const handleImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
         const file = e.target.files?.[0];
         if (!file) return;
 
         setPreview(URL.createObjectURL(file));
+
+        const reader = new FileReader();
+        reader.onloadend = () => {
+            setImageBase64(reader.result as string);
+        };
+        reader.readAsDataURL(file);
+
         setLoading(true);
 
         const uploadData = new FormData();
         uploadData.append('image', file);
 
         try {
-            // ★ 新しいエンドポイントを使用
             const res = await fetch(`${API_BASE_URL}/analyze-listing`, {
                 method: 'POST',
                 body: uploadData
@@ -37,7 +49,6 @@ const SellItem = () => {
             text = text.replace(/```json/g, "").replace(/```/g, "");
             const data = JSON.parse(text);
 
-            // AIの結果をフォームに自動入力
             setFormData({
                 title: data.title || '',
                 description: data.description || '',
@@ -46,16 +57,51 @@ const SellItem = () => {
                 price: data.suggested_price ? String(data.suggested_price) : '',
             });
         } catch (err) {
+            console.error(err);
             alert("AI分析に失敗しました。手動で入力してください。");
         } finally {
             setLoading(false);
         }
     };
 
-    const handleSubmit = () => {
-        alert("出品が完了しました！\n（デモのため実際には保存されません）");
-        setPreview(null);
-        setFormData({ title: '', description: '', category: '', tags: [], price: '' });
+    const handleSubmit = async () => {
+        if (!formData.title || !formData.price) return;
+
+        try {
+            // ★重要: ここで本当にバックエンドに保存します
+            const payload = {
+                name: formData.title,
+                price: parseInt(formData.price),
+                description: formData.description,
+                image_url: imageBase64 // 画像データも送信
+            };
+
+            const res = await fetch(`${API_BASE_URL}/items`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify(payload),
+            });
+
+            if (!res.ok) {
+                throw new Error("出品に失敗しました");
+            }
+
+            alert("出品が完了しました！");
+
+            // 入力をクリア
+            setPreview(null);
+            setImageBase64("");
+            setFormData({ title: '', description: '', category: '', tags: [], price: '' });
+
+            // ホーム画面に戻る
+            if (onComplete) onComplete();
+
+        } catch (error) {
+            console.error(error);
+            alert("エラーが発生しました。");
+        }
     };
 
     return (
@@ -67,8 +113,6 @@ const SellItem = () => {
 
             <div className="bg-white border border-stone-200 p-8 shadow-sm">
                 <div className="grid md:grid-cols-2 gap-10">
-
-                    {/* 左：画像アップロード */}
                     <div className="space-y-4">
                         <label className={`
                             relative cursor-pointer flex flex-col items-center justify-center 
@@ -80,7 +124,7 @@ const SellItem = () => {
                                 <>
                                     <img src={preview} alt="preview" className="absolute inset-0 w-full h-full object-cover" />
                                     <div className="absolute top-2 right-2 bg-white/80 p-1 rounded-full shadow-sm hover:bg-white text-stone-600"
-                                         onClick={(e) => { e.preventDefault(); setPreview(null); }}>
+                                         onClick={(e) => { e.preventDefault(); setPreview(null); setImageBase64(""); }}>
                                         <X className="w-4 h-4" />
                                     </div>
                                 </>
@@ -99,13 +143,11 @@ const SellItem = () => {
                                 <div className="absolute inset-0 bg-white/90 flex flex-col items-center justify-center z-20">
                                     <Sparkles className="w-8 h-8 text-yellow-500 animate-spin mb-3" />
                                     <p className="text-sm font-bold text-stone-800 animate-pulse">AIが商品を分析中...</p>
-                                    <p className="text-xs text-stone-400 mt-1">タイトル・価格・説明文を生成しています</p>
                                 </div>
                             )}
                         </label>
                     </div>
 
-                    {/* 右：入力フォーム */}
                     <div className="space-y-6">
                         <div className="space-y-1">
                             <label className="text-[10px] font-bold text-stone-400 uppercase tracking-widest">Title</label>
@@ -160,7 +202,6 @@ const SellItem = () => {
                             />
                         </div>
 
-                        {/* タグ表示 */}
                         {formData.tags.length > 0 && (
                             <div className="flex flex-wrap gap-2">
                                 {formData.tags.map((tag, i) => (
