@@ -7,10 +7,8 @@ import SellItem from './SellItem';
 import TradeChat from './TradeChat';
 import { ShoppingBag, RefreshCw, ChevronRight, MessageCircle, Shield, LogOut, Plus, Wrench, MessageSquareText } from 'lucide-react';
 
-// Cloud RunのURL
 const API_BASE_URL = 'https://hackathon-backend-1093557143473.us-central1.run.app';
 
-// 型定義
 interface Item {
     id: string;
     name: string;
@@ -24,22 +22,19 @@ interface Item {
 function App() {
     const [items, setItems] = useState<Item[]>([]);
     const [showSupportChat, setShowSupportChat] = useState(false);
-
-    // チャット用に選択されたアイテムを管理
     const [selectedItemForChat, setSelectedItemForChat] = useState<Item | null>(null);
 
     const [user, setUser] = useState<any>(null);
     const [token, setToken] = useState<string | null>(null);
     const [view, setView] = useState<'home' | 'sell'>('home');
 
-    // バックエンドから商品一覧を取得
     const fetchItems = async () => {
         try {
             const res = await fetch(`${API_BASE_URL}/items`);
             if (res.ok) {
                 const data = await res.json();
                 if (Array.isArray(data)) {
-                    setItems(data.reverse()); // 新しい順に表示
+                    setItems(data.reverse());
                 }
             }
         } catch (e) {
@@ -53,7 +48,7 @@ function App() {
             try {
                 await fetch(`${API_BASE_URL}/items/purchase?id=${item.id}`, { method: 'POST' });
                 alert('購入が完了しました！');
-                fetchItems().catch(console.error); // 警告対策
+                fetchItems().catch(console.error);
             } catch (e) {
                 alert('購入処理に失敗しました');
             }
@@ -75,12 +70,12 @@ function App() {
 
     const handleSellComplete = () => {
         setView('home');
-        fetchItems().catch(console.error); // 警告対策
+        fetchItems().catch(console.error);
     };
 
     useEffect(() => {
         if (token) {
-            fetchItems().catch(console.error); // 警告対策
+            fetchItems().catch(console.error);
         }
     }, [token, view]);
 
@@ -129,9 +124,11 @@ function App() {
 
             <main className="max-w-4xl mx-auto px-6 py-16 space-y-24">
 
+                {/* ★修正: ログイン中のユーザーID (user.user_id) を渡す */}
                 {selectedItemForChat && (
                     <TradeChat
                         item={selectedItemForChat}
+                        currentUserId={user?.user_id}
                         onClose={() => setSelectedItemForChat(null)}
                     />
                 )}
