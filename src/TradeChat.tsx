@@ -10,7 +10,7 @@ interface TradeChatProps {
         price: number;
         image_url?: string;
     };
-    currentUserId: string; // ★追加: ログイン中のユーザーIDを受け取る
+    currentUserId: string;
     onClose: () => void;
 }
 
@@ -26,27 +26,27 @@ const TradeChat: React.FC<TradeChatProps> = ({ item, currentUserId, onClose }) =
     const [inputText, setInputText] = useState('');
     const messagesEndRef = useRef<HTMLDivElement>(null);
 
-    // メッセージ取得関数
     const fetchMessages = async () => {
         try {
             const res = await fetch(`${API_BASE_URL}/messages?item_id=${item.id}`);
             if (res.ok) {
                 const data = await res.json();
-                setMessages(data);
+                // サーバーからデータが返ってきたときだけ更新
+                if (Array.isArray(data)) {
+                    setMessages(data);
+                }
             }
         } catch (error) {
             console.error("チャット取得エラー:", error);
         }
     };
 
-    // 初回＆3秒ごとに更新 (ポーリング)
     useEffect(() => {
         fetchMessages();
         const interval = setInterval(fetchMessages, 3000);
         return () => clearInterval(interval);
     }, [item.id]);
 
-    // 自動スクロール
     useEffect(() => {
         messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
     }, [messages]);
@@ -54,20 +54,34 @@ const TradeChat: React.FC<TradeChatProps> = ({ item, currentUserId, onClose }) =
     const handleSend = async () => {
         if (!inputText.trim()) return;
 
+        const textToSend = inputText;
+        setInputText(''); // 入力欄をすぐに空にする
+
+        // ★改善: 送信した瞬間に、仮のメッセージとして画面に表示してしまう（待たせない）
+        const tempMessage: Message = {
+            id: 'temp-' + Date.now(),
+            content: textToSend,
+            sender_id: currentUserId,
+            created_at: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+        };
+        setMessages(prev => [...prev, tempMessage]);
+
         try {
+            // 裏側でサーバーに送信
             await fetch(`${API_BASE_URL}/messages`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({
                     item_id: item.id,
-                    sender_id: currentUserId, // ★修正: "me" ではなく本物のIDを送る
-                    content: inputText
+                    sender_id: currentUserId,
+                    content: textToSend
                 })
             });
-            setInputText('');
+            // 送信完了したら、正式なデータを再取得（IDなどを確定させるため）
             fetchMessages();
         } catch (error) {
             console.error("送信エラー:", error);
+            alert("メッセージの送信に失敗しました");
         }
     };
 
@@ -101,7 +115,6 @@ const TradeChat: React.FC<TradeChatProps> = ({ item, currentUserId, onClose }) =
                     </p>
                 ) : (
                     messages.map((msg) => {
-                        // ★修正: 送信者IDと自分のIDを比較して、左右を出し分ける
                         const isMe = msg.sender_id === currentUserId;
                         return (
                             <div key={msg.id} className={`flex ${isMe ? 'justify-end' : 'justify-start'}`}>
