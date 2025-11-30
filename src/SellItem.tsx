@@ -1,9 +1,10 @@
 import React, { useState } from 'react';
-import { Camera, Sparkles, Tag, DollarSign, Upload, Loader2, X } from 'lucide-react';
+import { Camera, Sparkles, Tag, DollarSign, Upload, X } from 'lucide-react';
 
 const API_BASE_URL = 'https://hackathon-backend-1093557143473.us-central1.run.app';
 
-// ★修正: 親コンポーネント(App)に出品完了を伝えるためのprops
+// ★重要: ここが TradeChatProps になっているとエラーになります。
+// 正しくは SellItemProps です。
 interface SellItemProps {
     onComplete?: () => void;
 }
@@ -68,12 +69,11 @@ const SellItem: React.FC<SellItemProps> = ({ onComplete }) => {
         if (!formData.title || !formData.price) return;
 
         try {
-            // ★重要: ここで本当にバックエンドに保存します
             const payload = {
                 name: formData.title,
                 price: parseInt(formData.price),
                 description: formData.description,
-                image_url: imageBase64 // 画像データも送信
+                image_url: imageBase64
             };
 
             const res = await fetch(`${API_BASE_URL}/items`, {
@@ -90,12 +90,10 @@ const SellItem: React.FC<SellItemProps> = ({ onComplete }) => {
 
             alert("出品が完了しました！");
 
-            // 入力をクリア
             setPreview(null);
             setImageBase64("");
             setFormData({ title: '', description: '', category: '', tags: [], price: '' });
 
-            // ホーム画面に戻る
             if (onComplete) onComplete();
 
         } catch (error) {

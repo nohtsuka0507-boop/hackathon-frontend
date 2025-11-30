@@ -24,19 +24,20 @@ interface Item {
 function App() {
     const [items, setItems] = useState<Item[]>([]);
     const [showSupportChat, setShowSupportChat] = useState(false);
+
+    // チャット用に選択されたアイテムを管理
     const [selectedItemForChat, setSelectedItemForChat] = useState<Item | null>(null);
 
     const [user, setUser] = useState<any>(null);
     const [token, setToken] = useState<string | null>(null);
     const [view, setView] = useState<'home' | 'sell'>('home');
 
-    // ★修正: デモデータを廃止し、APIからのみ取得
+    // バックエンドから商品一覧を取得
     const fetchItems = async () => {
         try {
             const res = await fetch(`${API_BASE_URL}/items`);
             if (res.ok) {
                 const data = await res.json();
-                // サーバーからデータが返ってきた場合のみセット
                 if (Array.isArray(data)) {
                     setItems(data.reverse()); // 新しい順に表示
                 }
@@ -50,10 +51,9 @@ function App() {
         if (item.sold_out) return;
         if (window.confirm(`「${item.name}」を購入しますか？\n価格: ¥${item.price.toLocaleString()}`)) {
             try {
-                // 購入APIを叩く
                 await fetch(`${API_BASE_URL}/items/purchase?id=${item.id}`, { method: 'POST' });
                 alert('購入が完了しました！');
-                fetchItems(); // リスト更新
+                fetchItems().catch(console.error); // 警告対策
             } catch (e) {
                 alert('購入処理に失敗しました');
             }
@@ -73,15 +73,16 @@ function App() {
         setView('home');
     };
 
-    // 出品完了後にホームに戻るための関数
     const handleSellComplete = () => {
         setView('home');
-        fetchItems(); // リスト更新
+        fetchItems().catch(console.error); // 警告対策
     };
 
     useEffect(() => {
-        if (token) fetchItems();
-    }, [token, view]); // viewが変わった時（出品から戻った時）にも再取得
+        if (token) {
+            fetchItems().catch(console.error); // 警告対策
+        }
+    }, [token, view]);
 
     if (!token) {
         return <Auth onLoginSuccess={handleLoginSuccess} />;
@@ -154,7 +155,6 @@ function App() {
                             <div className="absolute -top-10 left-1/2 -translate-x-1/2 bg-stone-200 text-stone-500 text-[10px] px-3 py-1 rounded-full uppercase tracking-widest">
                                 Step 2
                             </div>
-                            {/* ★修正: 出品完了時のコールバックを渡す */}
                             <SellItem onComplete={handleSellComplete} />
                         </section>
                     </div>
@@ -271,7 +271,7 @@ function App() {
             </main>
 
             <footer className="py-12 border-t border-stone-200 mt-20 text-center text-xs text-stone-400">
-                <p>&copy; 2025 Re:Value Project. All rights reserved.</p>
+                <p>&copy; 2024 Re:Value Project. All rights reserved.</p>
             </footer>
         </div>
     );
