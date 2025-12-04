@@ -124,11 +124,11 @@ function App() {
 
             <main className="max-w-4xl mx-auto px-6 py-16 space-y-24">
 
-                {/* ★修正: ログイン中のユーザーID (user.user_id) を渡す */}
+                {/* ★修正: user_id ではなく id を渡すように変更！ */}
                 {selectedItemForChat && (
                     <TradeChat
                         item={selectedItemForChat}
-                        currentUserId={user?.user_id}
+                        currentUserId={user?.id}
                         onClose={() => setSelectedItemForChat(null)}
                     />
                 )}
