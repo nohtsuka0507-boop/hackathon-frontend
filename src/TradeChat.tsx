@@ -10,7 +10,7 @@ interface TradeChatProps {
         price: number;
         image_url?: string;
     };
-    currentUserId: string;
+    currentUserId: string; // ここに自分のIDが入ってくる
     onClose: () => void;
 }
 
@@ -26,12 +26,16 @@ const TradeChat: React.FC<TradeChatProps> = ({ item, currentUserId, onClose }) =
     const [inputText, setInputText] = useState('');
     const messagesEndRef = useRef<HTMLDivElement>(null);
 
+    // ★追加: IDが正しく届いているか確認用（F12のコンソールを見てください）
+    useEffect(() => {
+        console.log(`自分のID: ${currentUserId}`);
+    }, [currentUserId]);
+
     const fetchMessages = async () => {
         try {
             const res = await fetch(`${API_BASE_URL}/messages?item_id=${item.id}`);
             if (res.ok) {
                 const data = await res.json();
-                // サーバーからデータが返ってきたときだけ更新
                 if (Array.isArray(data)) {
                     setMessages(data);
                 }
@@ -55,9 +59,9 @@ const TradeChat: React.FC<TradeChatProps> = ({ item, currentUserId, onClose }) =
         if (!inputText.trim()) return;
 
         const textToSend = inputText;
-        setInputText(''); // 入力欄をすぐに空にする
+        setInputText('');
 
-        // ★改善: 送信した瞬間に、仮のメッセージとして画面に表示してしまう（待たせない）
+        // 仮メッセージ表示
         const tempMessage: Message = {
             id: 'temp-' + Date.now(),
             content: textToSend,
@@ -67,7 +71,6 @@ const TradeChat: React.FC<TradeChatProps> = ({ item, currentUserId, onClose }) =
         setMessages(prev => [...prev, tempMessage]);
 
         try {
-            // 裏側でサーバーに送信
             await fetch(`${API_BASE_URL}/messages`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
@@ -77,7 +80,6 @@ const TradeChat: React.FC<TradeChatProps> = ({ item, currentUserId, onClose }) =
                     content: textToSend
                 })
             });
-            // 送信完了したら、正式なデータを再取得（IDなどを確定させるため）
             fetchMessages();
         } catch (error) {
             console.error("送信エラー:", error);
@@ -108,25 +110,41 @@ const TradeChat: React.FC<TradeChatProps> = ({ item, currentUserId, onClose }) =
             </div>
 
             {/* メッセージエリア */}
-            <div className="h-80 overflow-y-auto p-4 bg-stone-50 space-y-4">
+            <div className="h-80 overflow-y-auto p-4 bg-stone-50 space-y-6">
                 {messages.length === 0 ? (
                     <p className="text-center text-xs text-stone-400 mt-10">
                         まだメッセージはありません。<br/>質問や挨拶を送ってみましょう！
                     </p>
                 ) : (
                     messages.map((msg) => {
+                        // ★修正: ID判定
                         const isMe = msg.sender_id === currentUserId;
+
                         return (
-                            <div key={msg.id} className={`flex ${isMe ? 'justify-end' : 'justify-start'}`}>
-                                <div className={`max-w-[80%] rounded-2xl px-4 py-2 text-sm shadow-sm ${
-                                    isMe
-                                        ? 'bg-indigo-600 text-white rounded-br-none'
-                                        : 'bg-white text-stone-800 border border-stone-200 rounded-bl-none'
+                            <div key={msg.id} className={`flex items-end gap-2 ${isMe ? 'flex-row-reverse' : 'flex-row'}`}>
+                                {/* アイコン */}
+                                <div className={`w-8 h-8 rounded-full flex items-center justify-center shrink-0 ${
+                                    isMe ? 'bg-indigo-100' : 'bg-stone-200'
                                 }`}>
-                                    <p>{msg.content}</p>
-                                    <p className={`text-[9px] mt-1 text-right ${isMe ? 'text-indigo-200' : 'text-stone-400'}`}>
+                                    <User className={`w-4 h-4 ${isMe ? 'text-indigo-600' : 'text-stone-500'}`} />
+                                </div>
+
+                                {/* 吹き出しとラベルのセット */}
+                                <div className={`flex flex-col ${isMe ? 'items-end' : 'items-start'} max-w-[70%]`}>
+                                    <span className="text-[10px] text-stone-400 mb-1 px-1">
+                                        {isMe ? 'あなた' : '相手'}
+                                    </span>
+
+                                    <div className={`px-4 py-2 text-sm shadow-sm break-words ${
+                                        isMe
+                                            ? 'bg-indigo-600 text-white rounded-2xl rounded-tr-none'
+                                            : 'bg-white text-stone-800 border border-stone-200 rounded-2xl rounded-tl-none'
+                                    }`}>
+                                        <p>{msg.content}</p>
+                                    </div>
+                                    <span className="text-[9px] text-stone-300 mt-1 px-1">
                                         {msg.created_at}
-                                    </p>
+                                    </span>
                                 </div>
                             </div>
                         );
