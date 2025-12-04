@@ -5,7 +5,8 @@ import CraftsmanChat from './CraftsmanChat';
 import Auth from './Auth';
 import SellItem from './SellItem';
 import TradeChat from './TradeChat';
-import { ShoppingBag, RefreshCw, ChevronRight, MessageCircle, Shield, LogOut, Plus, Wrench, MessageSquareText, Heart } from 'lucide-react';
+// ★修正: Search アイコンを追加
+import { ShoppingBag, RefreshCw, ChevronRight, MessageCircle, Shield, LogOut, Plus, Wrench, MessageSquareText, Heart, Search } from 'lucide-react';
 
 const API_BASE_URL = 'https://hackathon-backend-1093557143473.us-central1.run.app';
 
@@ -17,7 +18,7 @@ interface Item {
     sold_out: boolean;
     has_certificate?: boolean;
     image_url?: string;
-    like_count?: number; // ★追加: いいね数
+    like_count?: number;
 }
 
 function App() {
@@ -30,18 +31,34 @@ function App() {
     const [view, setView] = useState<'home' | 'sell'>('home');
     const [likedItemIds, setLikedItemIds] = useState<string[]>([]);
 
-    const fetchItems = async () => {
+    // ★追加: 検索キーワード
+    const [searchKeyword, setSearchKeyword] = useState('');
+
+    const fetchItems = async (keyword = '') => {
         try {
-            const res = await fetch(`${API_BASE_URL}/items`);
+            // ★修正: キーワードがあればクエリパラメータを付ける
+            const url = keyword
+                ? `${API_BASE_URL}/items?q=${encodeURIComponent(keyword)}`
+                : `${API_BASE_URL}/items`;
+
+            const res = await fetch(url);
             if (res.ok) {
                 const data = await res.json();
                 if (Array.isArray(data)) {
-                    setItems(data.reverse());
+                    // 検索時はサーバー側で並び替えや絞り込み済み
+                    setItems(data);
                 }
             }
         } catch (e) {
             console.error("データ取得エラー:", e);
         }
+    };
+
+    // ★追加: 検索実行
+    const handleSearch = (e: React.FormEvent) => {
+        e.preventDefault();
+        setView('home'); // 検索したらホームに戻る
+        fetchItems(searchKeyword);
     };
 
     const fetchLikes = async () => {
@@ -61,15 +78,12 @@ function App() {
         e.stopPropagation();
         if (!user?.id) return;
 
-        // 見た目の即時更新
         const isCurrentlyLiked = likedItemIds.includes(itemId);
         if (isCurrentlyLiked) {
             setLikedItemIds(prev => prev.filter(id => id !== itemId));
-            // 数字も減らす（見た目だけ）
             setItems(prev => prev.map(i => i.id === itemId ? { ...i, like_count: (i.like_count || 0) - 1 } : i));
         } else {
             setLikedItemIds(prev => [...prev, itemId]);
-            // 数字も増やす（見た目だけ）
             setItems(prev => prev.map(i => i.id === itemId ? { ...i, like_count: (i.like_count || 0) + 1 } : i));
         }
 
@@ -79,7 +93,6 @@ function App() {
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ user_id: user.id, item_id: itemId })
             });
-            // 確実にするため再取得してもよいが、ここでは省略
         } catch (error) {
             console.error("いいね更新エラー", error);
         }
@@ -91,7 +104,8 @@ function App() {
             try {
                 await fetch(`${API_BASE_URL}/items/purchase?id=${item.id}`, { method: 'POST' });
                 alert('購入が完了しました！');
-                fetchItems().catch(console.error);
+                // 購入後は検索状態を維持するか、リセットするか。今回はリセットせず再取得
+                fetchItems(searchKeyword);
             } catch (e) {
                 alert('購入処理に失敗しました');
             }
@@ -110,21 +124,24 @@ function App() {
         setSelectedItemForChat(null);
         setLikedItemIds([]);
         setView('home');
+        setSearchKeyword(''); // ログアウト時に検索クリア
     };
 
     const handleSellComplete = () => {
         setView('home');
-        fetchItems().catch(console.error);
+        setSearchKeyword(''); // 出品後は全件表示に戻す
+        fetchItems();
     };
 
     useEffect(() => {
         if (token) {
-            fetchItems().catch(console.error);
+            fetchItems(); // 初回は全件取得
             if (user?.id) {
                 fetchLikes().catch(console.error);
             }
         }
-    }, [token, view, user?.id]);
+    }, [token, user?.id]);
+    // viewが変わった時に再取得すると検索結果が消えるので、view依存は外しました
 
     if (!token) {
         return <Auth onLoginSuccess={handleLoginSuccess} />;
@@ -134,35 +151,46 @@ function App() {
         <div className="min-h-screen bg-stone-50 text-stone-800 font-sans pb-24 selection:bg-stone-200 relative">
 
             <header className="sticky top-0 z-50 bg-stone-50/90 backdrop-blur-sm border-b border-stone-200">
-                <div className="max-w-5xl mx-auto px-6 h-20 flex items-center justify-between">
-                    <div className="flex items-center gap-3 cursor-pointer" onClick={() => setView('home')}>
+                <div className="max-w-5xl mx-auto px-6 h-20 flex items-center justify-between gap-4">
+                    <div className="flex items-center gap-3 cursor-pointer shrink-0" onClick={() => {
+                        setView('home');
+                        setSearchKeyword('');
+                        fetchItems(''); // ロゴクリックでリセット
+                    }}>
                         <div className="text-stone-800 p-1 border border-stone-800 rounded-sm">
                             <RefreshCw className="w-4 h-4" />
                         </div>
-                        <h1 className="text-xl font-normal tracking-widest text-stone-800 uppercase">
+                        <h1 className="text-xl font-normal tracking-widest text-stone-800 uppercase hidden sm:block">
                             Re:Value
                         </h1>
                     </div>
 
-                    <nav className="flex items-center gap-6 text-sm tracking-wide text-stone-600">
-                        <span className="text-[10px] text-stone-400 uppercase tracking-wider hidden md:inline">
-                            Welcome, {user?.name}
-                        </span>
+                    {/* ★追加: 検索バー */}
+                    <form onSubmit={handleSearch} className="flex-1 max-w-md relative group">
+                        <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-stone-400 group-focus-within:text-stone-600 transition-colors" />
+                        <input
+                            type="text"
+                            value={searchKeyword}
+                            onChange={(e) => setSearchKeyword(e.target.value)}
+                            placeholder="何をお探しですか？"
+                            className="w-full bg-stone-100 border-none rounded-full py-2 pl-10 pr-4 text-sm focus:ring-1 focus:ring-stone-300 outline-none transition-all"
+                        />
+                    </form>
 
+                    <nav className="flex items-center gap-4 text-sm tracking-wide text-stone-600 shrink-0">
                         <button
                             onClick={() => setView('sell')}
-                            className={`flex items-center gap-2 px-4 py-2 border rounded-sm transition-colors ${view === 'sell' ? 'bg-stone-800 text-white border-stone-800' : 'bg-white border-stone-300 hover:border-stone-800'}`}
+                            className={`flex items-center gap-2 px-3 py-2 border rounded-sm transition-colors ${view === 'sell' ? 'bg-stone-800 text-white border-stone-800' : 'bg-white border-stone-300 hover:border-stone-800'}`}
                         >
                             <Plus className="w-3 h-3" />
-                            <span className="text-xs font-bold tracking-widest uppercase">Sell</span>
+                            <span className="text-xs font-bold tracking-widest uppercase hidden md:inline">Sell</span>
                         </button>
 
                         <button onClick={() => setShowSupportChat(!showSupportChat)} className="flex items-center gap-2 hover:text-stone-900 transition-colors">
                             <MessageCircle className="w-4 h-4" />
-                            <span className="hidden md:inline">Support</span>
                         </button>
 
-                        <button onClick={handleLogout} className="flex items-center gap-1 hover:text-red-500 transition-colors ml-2" title="ログアウト">
+                        <button onClick={handleLogout} className="flex items-center gap-1 hover:text-red-500 transition-colors" title="ログアウト">
                             <LogOut className="w-4 h-4" />
                         </button>
                     </nav>
@@ -219,13 +247,17 @@ function App() {
                                     <h3 className="text-xl font-normal text-stone-800 tracking-wide mb-1">
                                         Marketplace
                                     </h3>
-                                    <p className="text-sm text-stone-500">出品商品一覧</p>
+                                    <p className="text-sm text-stone-500">
+                                        {searchKeyword ? `「${searchKeyword}」の検索結果` : '出品商品一覧'}
+                                    </p>
                                 </div>
                             </div>
 
                             {items.length === 0 ? (
                                 <div className="text-center py-20 bg-white border border-dashed border-stone-300 rounded-lg">
-                                    <p className="text-stone-400">現在出品されている商品はありません</p>
+                                    <p className="text-stone-400">
+                                        {searchKeyword ? '該当する商品は見つかりませんでした' : '現在出品されている商品はありません'}
+                                    </p>
                                 </div>
                             ) : (
                                 <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
@@ -236,6 +268,7 @@ function App() {
                                                     <img
                                                         src={item.image_url}
                                                         alt={item.name}
+                                                        loading="lazy"
                                                         className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105"
                                                     />
                                                 ) : (
@@ -244,7 +277,6 @@ function App() {
                                                     </div>
                                                 )}
 
-                                                {/* ★修正: ハートボタンと数字 */}
                                                 <button
                                                     onClick={(e) => handleToggleLike(item.id, e)}
                                                     className="absolute top-2 right-2 p-1.5 bg-white/90 backdrop-blur rounded-lg shadow-sm hover:bg-white transition-all z-20 group-hover:scale-110 duration-300 flex flex-col items-center min-w-[32px]"
@@ -256,14 +288,11 @@ function App() {
                                                                 : "text-stone-400 hover:text-rose-500"
                                                         }`}
                                                     />
-                                                    {/* いいね数表示（0より大きい時だけ） */}
-                                                    {(item.like_count || 0) > 0 && (
-                                                        <span className={`text-[9px] font-bold leading-none ${
-                                                            likedItemIds.includes(item.id) ? "text-rose-500" : "text-stone-500"
-                                                        }`}>
-                                                            {item.like_count}
-                                                        </span>
-                                                    )}
+                                                    <span className={`text-[9px] font-bold leading-none ${
+                                                        likedItemIds.includes(item.id) ? "text-rose-500" : "text-stone-500"
+                                                    }`}>
+                                                        {item.like_count || 0}
+                                                    </span>
                                                 </button>
 
                                                 {item.has_certificate && (
