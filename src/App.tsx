@@ -5,7 +5,8 @@ import CraftsmanChat from './CraftsmanChat';
 import Auth from './Auth';
 import SellItem from './SellItem';
 import TradeChat from './TradeChat';
-import { ShoppingBag, RefreshCw, ChevronRight, MessageCircle, Shield, LogOut, Plus, Wrench, MessageSquareText } from 'lucide-react';
+// ★Heartを追加
+import { ShoppingBag, RefreshCw, ChevronRight, MessageCircle, Shield, LogOut, Plus, Wrench, MessageSquareText, Heart } from 'lucide-react';
 
 const API_BASE_URL = 'https://hackathon-backend-1093557143473.us-central1.run.app';
 
@@ -28,6 +29,9 @@ function App() {
     const [token, setToken] = useState<string | null>(null);
     const [view, setView] = useState<'home' | 'sell'>('home');
 
+    // ★追加: いいねした商品のIDリスト
+    const [likedItemIds, setLikedItemIds] = useState<string[]>([]);
+
     const fetchItems = async () => {
         try {
             const res = await fetch(`${API_BASE_URL}/items`);
@@ -39,6 +43,46 @@ function App() {
             }
         } catch (e) {
             console.error("データ取得エラー:", e);
+        }
+    };
+
+    // ★追加: いいね一覧を取得する関数
+    const fetchLikes = async () => {
+        if (!user?.id) return;
+        try {
+            const res = await fetch(`${API_BASE_URL}/likes?user_id=${user.id}`);
+            if (res.ok) {
+                const ids = await res.json();
+                // nullが返ってくる可能性を考慮して空配列をデフォルトに
+                setLikedItemIds(ids || []);
+            }
+        } catch (e) {
+            console.error("いいね取得エラー:", e);
+        }
+    };
+
+    // ★追加: ハートボタンを押した時の処理
+    const handleToggleLike = async (itemId: string, e: React.MouseEvent) => {
+        e.stopPropagation(); // 商品詳細チャットが開くのを防ぐ
+        if (!user?.id) return;
+
+        // 画面上の見た目を即座に更新（サクサク動くように見せる）
+        const isCurrentlyLiked = likedItemIds.includes(itemId);
+        if (isCurrentlyLiked) {
+            setLikedItemIds(prev => prev.filter(id => id !== itemId));
+        } else {
+            setLikedItemIds(prev => [...prev, itemId]);
+        }
+
+        // 裏側でサーバーに通信
+        try {
+            await fetch(`${API_BASE_URL}/likes`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ user_id: user.id, item_id: itemId })
+            });
+        } catch (error) {
+            console.error("いいね更新エラー", error);
         }
     };
 
@@ -65,6 +109,7 @@ function App() {
         setUser(null);
         setShowSupportChat(false);
         setSelectedItemForChat(null);
+        setLikedItemIds([]); // ログアウトしたらいいね情報もクリア
         setView('home');
     };
 
@@ -76,8 +121,12 @@ function App() {
     useEffect(() => {
         if (token) {
             fetchItems().catch(console.error);
+            // ★ログインしたら「いいね」も取得する
+            if (user?.id) {
+                fetchLikes().catch(console.error);
+            }
         }
-    }, [token, view]);
+    }, [token, view, user?.id]); // user.idが変わった時も再取得
 
     if (!token) {
         return <Auth onLoginSuccess={handleLoginSuccess} />;
@@ -124,7 +173,6 @@ function App() {
 
             <main className="max-w-4xl mx-auto px-6 py-16 space-y-24">
 
-                {/* ★修正: user_id ではなく id を渡すように変更！ */}
                 {selectedItemForChat && (
                     <TradeChat
                         item={selectedItemForChat}
@@ -197,6 +245,20 @@ function App() {
                                                         <ShoppingBag className="w-12 h-12 stroke-1" />
                                                     </div>
                                                 )}
+
+                                                {/* ★追加: ハートボタン */}
+                                                <button
+                                                    onClick={(e) => handleToggleLike(item.id, e)}
+                                                    className="absolute top-2 right-2 p-2 bg-white/80 backdrop-blur rounded-full shadow-sm hover:bg-white transition-colors z-20 group-hover:scale-110 duration-300"
+                                                >
+                                                    <Heart
+                                                        className={`w-5 h-5 transition-colors ${
+                                                            likedItemIds.includes(item.id)
+                                                                ? "fill-rose-500 text-rose-500" // いいね済み：赤色
+                                                                : "text-stone-400 hover:text-rose-500" // 未いいね：灰色
+                                                        }`}
+                                                    />
+                                                </button>
 
                                                 {item.has_certificate && (
                                                     <div className="absolute top-2 left-2 bg-stone-800/80 backdrop-blur text-white text-[10px] px-2 py-1 rounded-sm flex items-center gap-1">
