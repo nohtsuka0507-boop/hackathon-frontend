@@ -5,7 +5,6 @@ import CraftsmanChat from './CraftsmanChat';
 import Auth from './Auth';
 import SellItem from './SellItem';
 import TradeChat from './TradeChat';
-// ★修正: Search アイコンを追加
 import { ShoppingBag, RefreshCw, ChevronRight, MessageCircle, Shield, LogOut, Plus, Wrench, MessageSquareText, Heart, Search } from 'lucide-react';
 
 const API_BASE_URL = 'https://hackathon-backend-1093557143473.us-central1.run.app';
@@ -31,12 +30,10 @@ function App() {
     const [view, setView] = useState<'home' | 'sell'>('home');
     const [likedItemIds, setLikedItemIds] = useState<string[]>([]);
 
-    // ★追加: 検索キーワード
     const [searchKeyword, setSearchKeyword] = useState('');
 
     const fetchItems = async (keyword = '') => {
         try {
-            // ★修正: キーワードがあればクエリパラメータを付ける
             const url = keyword
                 ? `${API_BASE_URL}/items?q=${encodeURIComponent(keyword)}`
                 : `${API_BASE_URL}/items`;
@@ -45,7 +42,6 @@ function App() {
             if (res.ok) {
                 const data = await res.json();
                 if (Array.isArray(data)) {
-                    // 検索時はサーバー側で並び替えや絞り込み済み
                     setItems(data);
                 }
             }
@@ -54,10 +50,9 @@ function App() {
         }
     };
 
-    // ★追加: 検索実行
     const handleSearch = (e: React.FormEvent) => {
         e.preventDefault();
-        setView('home'); // 検索したらホームに戻る
+        setView('home');
         fetchItems(searchKeyword);
     };
 
@@ -104,7 +99,6 @@ function App() {
             try {
                 await fetch(`${API_BASE_URL}/items/purchase?id=${item.id}`, { method: 'POST' });
                 alert('購入が完了しました！');
-                // 購入後は検索状態を維持するか、リセットするか。今回はリセットせず再取得
                 fetchItems(searchKeyword);
             } catch (e) {
                 alert('購入処理に失敗しました');
@@ -124,24 +118,23 @@ function App() {
         setSelectedItemForChat(null);
         setLikedItemIds([]);
         setView('home');
-        setSearchKeyword(''); // ログアウト時に検索クリア
+        setSearchKeyword('');
     };
 
     const handleSellComplete = () => {
         setView('home');
-        setSearchKeyword(''); // 出品後は全件表示に戻す
+        setSearchKeyword('');
         fetchItems();
     };
 
     useEffect(() => {
         if (token) {
-            fetchItems(); // 初回は全件取得
+            fetchItems();
             if (user?.id) {
                 fetchLikes().catch(console.error);
             }
         }
     }, [token, user?.id]);
-    // viewが変わった時に再取得すると検索結果が消えるので、view依存は外しました
 
     if (!token) {
         return <Auth onLoginSuccess={handleLoginSuccess} />;
@@ -155,7 +148,7 @@ function App() {
                     <div className="flex items-center gap-3 cursor-pointer shrink-0" onClick={() => {
                         setView('home');
                         setSearchKeyword('');
-                        fetchItems(''); // ロゴクリックでリセット
+                        fetchItems('');
                     }}>
                         <div className="text-stone-800 p-1 border border-stone-800 rounded-sm">
                             <RefreshCw className="w-4 h-4" />
@@ -165,19 +158,29 @@ function App() {
                         </h1>
                     </div>
 
-                    {/* ★追加: 検索バー */}
                     <form onSubmit={handleSearch} className="flex-1 max-w-md relative group">
                         <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-stone-400 group-focus-within:text-stone-600 transition-colors" />
+                        {/* ★修正: 入力が空になったら即座に全件取得するように変更 */}
                         <input
                             type="text"
                             value={searchKeyword}
-                            onChange={(e) => setSearchKeyword(e.target.value)}
+                            onChange={(e) => {
+                                const val = e.target.value;
+                                setSearchKeyword(val);
+                                if (val === '') {
+                                    fetchItems(''); // 空になったら全件表示！
+                                }
+                            }}
                             placeholder="何をお探しですか？"
                             className="w-full bg-stone-100 border-none rounded-full py-2 pl-10 pr-4 text-sm focus:ring-1 focus:ring-stone-300 outline-none transition-all"
                         />
                     </form>
 
                     <nav className="flex items-center gap-4 text-sm tracking-wide text-stone-600 shrink-0">
+                        <span className="text-[10px] text-stone-400 uppercase tracking-wider hidden md:inline">
+                            Welcome, {user?.name}
+                        </span>
+
                         <button
                             onClick={() => setView('sell')}
                             className={`flex items-center gap-2 px-3 py-2 border rounded-sm transition-colors ${view === 'sell' ? 'bg-stone-800 text-white border-stone-800' : 'bg-white border-stone-300 hover:border-stone-800'}`}
