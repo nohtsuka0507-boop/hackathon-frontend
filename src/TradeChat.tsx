@@ -10,7 +10,7 @@ interface TradeChatProps {
         price: number;
         image_url?: string;
     };
-    currentUserId: string; // ここに自分のIDが入ってくる
+    currentUserId: string;
     onClose: () => void;
 }
 
@@ -26,7 +26,6 @@ const TradeChat: React.FC<TradeChatProps> = ({ item, currentUserId, onClose }) =
     const [inputText, setInputText] = useState('');
     const messagesEndRef = useRef<HTMLDivElement>(null);
 
-    // ★追加: IDが正しく届いているか確認用（F12のコンソールを見てください）
     useEffect(() => {
         console.log(`自分のID: ${currentUserId}`);
     }, [currentUserId]);
@@ -57,6 +56,27 @@ const TradeChat: React.FC<TradeChatProps> = ({ item, currentUserId, onClose }) =
 
     const handleSend = async () => {
         if (!inputText.trim()) return;
+
+        // ★追加: AIによる不適切コンテンツチェック
+        try {
+            const checkRes = await fetch(`${API_BASE_URL}/check-content`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ content: inputText })
+            });
+
+            if (checkRes.ok) {
+                const checkData = await checkRes.json();
+                // AIがNG判定("is_safe": false)を出したらブロック
+                if (!checkData.is_safe) {
+                    alert("⚠️ AIにより不適切なメッセージと判定されました。\n相手を傷つける言葉が含まれていないか確認してください。");
+                    return; // 送信せずに終了
+                }
+            }
+        } catch (e) {
+            console.error("Check failed", e);
+            // エラー時はチェックをスキップして送信に進む
+        }
 
         const textToSend = inputText;
         setInputText('');
@@ -117,19 +137,16 @@ const TradeChat: React.FC<TradeChatProps> = ({ item, currentUserId, onClose }) =
                     </p>
                 ) : (
                     messages.map((msg) => {
-                        // ★修正: ID判定
                         const isMe = msg.sender_id === currentUserId;
 
                         return (
                             <div key={msg.id} className={`flex items-end gap-2 ${isMe ? 'flex-row-reverse' : 'flex-row'}`}>
-                                {/* アイコン */}
                                 <div className={`w-8 h-8 rounded-full flex items-center justify-center shrink-0 ${
                                     isMe ? 'bg-indigo-100' : 'bg-stone-200'
                                 }`}>
                                     <User className={`w-4 h-4 ${isMe ? 'text-indigo-600' : 'text-stone-500'}`} />
                                 </div>
 
-                                {/* 吹き出しとラベルのセット */}
                                 <div className={`flex flex-col ${isMe ? 'items-end' : 'items-start'} max-w-[70%]`}>
                                     <span className="text-[10px] text-stone-400 mb-1 px-1">
                                         {isMe ? 'あなた' : '相手'}
