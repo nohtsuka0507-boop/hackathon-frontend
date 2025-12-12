@@ -1,224 +1,229 @@
-import React, { useState } from 'react';
-import { Camera, Sparkles, Tag, DollarSign, Upload, X } from 'lucide-react';
+import React, { useState, useRef } from 'react';
+import { Camera, Sparkles, Tag, DollarSign, Upload, X, Loader2, Wand2 } from 'lucide-react';
 
 const API_BASE_URL = 'https://hackathon-backend-1093557143473.us-central1.run.app';
 
-// ★重要: ここが TradeChatProps になっているとエラーになります。
-// 正しくは SellItemProps です。
 interface SellItemProps {
-    onComplete?: () => void;
+    onComplete: () => void;
 }
 
 const SellItem: React.FC<SellItemProps> = ({ onComplete }) => {
     const [loading, setLoading] = useState(false);
-    const [preview, setPreview] = useState<string | null>(null);
-    const [imageBase64, setImageBase64] = useState<string>("");
+    const [analyzing, setAnalyzing] = useState(false);
+    const fileInputRef = useRef<HTMLInputElement>(null);
 
     const [formData, setFormData] = useState({
-        title: '',
-        description: '',
-        category: '',
-        tags: [] as string[],
+        name: '',
         price: '',
+        description: '',
+        image: null as File | null
     });
+    const [previewUrl, setPreviewUrl] = useState<string | null>(null);
 
-    const handleImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
-        const file = e.target.files?.[0];
-        if (!file) return;
+    const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+        if (e.target.files && e.target.files[0]) {
+            const file = e.target.files[0];
+            setFormData({ ...formData, image: file });
+            setPreviewUrl(URL.createObjectURL(file));
+        }
+    };
 
-        setPreview(URL.createObjectURL(file));
+    const handleAnalyzeImage = async () => {
+        if (!formData.image) {
+            alert("先に画像を選択してください");
+            return;
+        }
+        setAnalyzing(true);
 
-        const reader = new FileReader();
-        reader.onloadend = () => {
-            setImageBase64(reader.result as string);
-        };
-        reader.readAsDataURL(file);
-
-        setLoading(true);
-
-        const uploadData = new FormData();
-        uploadData.append('image', file);
+        const form = new FormData();
+        form.append('image', formData.image);
 
         try {
             const res = await fetch(`${API_BASE_URL}/analyze-listing`, {
                 method: 'POST',
-                body: uploadData
+                body: form,
             });
-            if (!res.ok) throw new Error("AI分析失敗");
 
-            let text = await res.text();
-            text = text.replace(/```json/g, "").replace(/```/g, "");
-            const data = JSON.parse(text);
-
-            setFormData({
-                title: data.title || '',
-                description: data.description || '',
-                category: data.category || '',
-                tags: data.tags || [],
-                price: data.suggested_price ? String(data.suggested_price) : '',
-            });
-        } catch (err) {
-            console.error(err);
-            alert("AI分析に失敗しました。手動で入力してください。");
+            if (res.ok) {
+                const data = await res.json();
+                setFormData(prev => ({
+                    ...prev,
+                    name: data.title || prev.name,
+                    description: data.description || prev.description,
+                    price: data.suggested_price ? String(data.suggested_price) : prev.price
+                }));
+            } else {
+                console.error("AI Analysis failed");
+                alert("画像の解析に失敗しました");
+            }
+        } catch (e) {
+            console.error(e);
+            alert("エラーが発生しました");
         } finally {
-            setLoading(false);
+            setAnalyzing(false);
         }
     };
 
-    const handleSubmit = async () => {
-        if (!formData.title || !formData.price) return;
+    const handleSubmit = async (e: React.FormEvent) => {
+        e.preventDefault();
+        if (!formData.image || !formData.name || !formData.price) {
+            alert('必須項目を入力してください');
+            return;
+        }
+
+        setLoading(true);
 
         try {
-            const payload = {
-                name: formData.title,
-                price: parseInt(formData.price),
-                description: formData.description,
-                image_url: imageBase64
+            const reader = new FileReader();
+            reader.readAsDataURL(formData.image);
+
+            reader.onloadend = async () => {
+                const base64Image = reader.result as string;
+
+                const res = await fetch(`${API_BASE_URL}/items`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        name: formData.name,
+                        price: parseInt(formData.price),
+                        description: formData.description,
+                        image_url: base64Image
+                    }),
+                });
+
+                if (res.ok) {
+                    alert('出品が完了しました！');
+                    onComplete();
+                } else {
+                    alert('出品に失敗しました');
+                }
+                setLoading(false);
             };
-
-            const res = await fetch(`${API_BASE_URL}/items`, {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                },
-                body: JSON.stringify(payload),
-            });
-
-            if (!res.ok) {
-                throw new Error("出品に失敗しました");
-            }
-
-            alert("出品が完了しました！");
-
-            setPreview(null);
-            setImageBase64("");
-            setFormData({ title: '', description: '', category: '', tags: [], price: '' });
-
-            if (onComplete) onComplete();
-
         } catch (error) {
             console.error(error);
-            alert("エラーが発生しました。");
+            setLoading(false);
+            alert('エラーが発生しました');
         }
     };
 
     return (
-        <div className="max-w-3xl mx-auto py-12 px-6">
-            <div className="text-center mb-10">
-                <h2 className="text-2xl font-normal text-stone-800 tracking-widest uppercase mb-3">Sell Your Item</h2>
-                <p className="text-stone-500 text-sm">写真を撮るだけ。AIがすべて入力します。</p>
-            </div>
+        <div className="bg-white p-8 rounded-lg shadow-sm border border-stone-100 max-w-2xl mx-auto">
+            <h2 className="text-xl font-normal text-stone-800 tracking-wide mb-8 text-center uppercase">
+                New Listing
+            </h2>
 
-            <div className="bg-white border border-stone-200 p-8 shadow-sm">
-                <div className="grid md:grid-cols-2 gap-10">
-                    <div className="space-y-4">
-                        <label className={`
-                            relative cursor-pointer flex flex-col items-center justify-center 
-                            w-full aspect-square border-2 border-dashed 
-                            transition-all duration-300 overflow-hidden bg-stone-50
-                            ${preview ? 'border-stone-300' : 'border-stone-300 hover:border-stone-500 hover:bg-stone-100'}
-                        `}>
-                            {preview ? (
-                                <>
-                                    <img src={preview} alt="preview" className="absolute inset-0 w-full h-full object-cover" />
-                                    <div className="absolute top-2 right-2 bg-white/80 p-1 rounded-full shadow-sm hover:bg-white text-stone-600"
-                                         onClick={(e) => { e.preventDefault(); setPreview(null); setImageBase64(""); }}>
-                                        <X className="w-4 h-4" />
-                                    </div>
-                                </>
-                            ) : (
-                                <div className="text-center p-6 space-y-3">
-                                    <div className="w-12 h-12 bg-stone-200 rounded-full flex items-center justify-center mx-auto text-stone-600">
-                                        <Camera className="w-6 h-6" />
-                                    </div>
-                                    <p className="text-sm font-medium text-stone-600">写真をアップロード</p>
-                                    <p className="text-xs text-stone-400">ドラッグ＆ドロップまたはクリック</p>
-                                </div>
-                            )}
-                            <input type="file" accept="image/*" onChange={handleImageUpload} className="hidden" />
-
-                            {loading && (
-                                <div className="absolute inset-0 bg-white/90 flex flex-col items-center justify-center z-20">
-                                    <Sparkles className="w-8 h-8 text-yellow-500 animate-spin mb-3" />
-                                    <p className="text-sm font-bold text-stone-800 animate-pulse">AIが商品を分析中...</p>
-                                </div>
-                            )}
-                        </label>
-                    </div>
-
-                    <div className="space-y-6">
-                        <div className="space-y-1">
-                            <label className="text-[10px] font-bold text-stone-400 uppercase tracking-widest">Title</label>
-                            <input
-                                type="text"
-                                className="w-full border-b border-stone-200 py-2 text-stone-800 focus:border-stone-800 outline-none transition-colors font-medium"
-                                placeholder="商品名"
-                                value={formData.title}
-                                onChange={e => setFormData({...formData, title: e.target.value})}
-                            />
-                        </div>
-
-                        <div className="flex gap-4">
-                            <div className="flex-1 space-y-1">
-                                <label className="text-[10px] font-bold text-stone-400 uppercase tracking-widest">Category</label>
-                                <div className="flex items-center border-b border-stone-200 py-2">
-                                    <Tag className="w-4 h-4 text-stone-400 mr-2" />
-                                    <input
-                                        type="text"
-                                        className="flex-1 bg-transparent outline-none text-stone-800"
-                                        placeholder="カテゴリ"
-                                        value={formData.category}
-                                        onChange={e => setFormData({...formData, category: e.target.value})}
-                                    />
-                                </div>
-                            </div>
-                            <div className="flex-1 space-y-1">
-                                <label className="text-[10px] font-bold text-stone-400 uppercase tracking-widest">Price</label>
-                                <div className="flex items-center border-b border-stone-200 py-2">
-                                    <DollarSign className="w-4 h-4 text-stone-400 mr-1" />
-                                    <input
-                                        type="number"
-                                        className="flex-1 bg-transparent outline-none text-stone-800 font-bold"
-                                        placeholder="0"
-                                        value={formData.price}
-                                        onChange={e => setFormData({...formData, price: e.target.value})}
-                                    />
-                                </div>
-                            </div>
-                        </div>
-
-                        <div className="space-y-1">
-                            <label className="text-[10px] font-bold text-stone-400 uppercase tracking-widest flex justify-between">
-                                Description
-                                {formData.description && <span className="text-yellow-600 text-[9px] flex items-center gap-1"><Sparkles className="w-3 h-3"/> AI Generated</span>}
-                            </label>
-                            <textarea
-                                className="w-full border border-stone-200 bg-stone-50 p-3 text-sm text-stone-700 h-32 focus:border-stone-400 outline-none resize-none leading-relaxed"
-                                placeholder="商品の説明..."
-                                value={formData.description}
-                                onChange={e => setFormData({...formData, description: e.target.value})}
-                            />
-                        </div>
-
-                        {formData.tags.length > 0 && (
-                            <div className="flex flex-wrap gap-2">
-                                {formData.tags.map((tag, i) => (
-                                    <span key={i} className="text-xs bg-stone-100 text-stone-600 px-2 py-1 rounded-sm">#{tag}</span>
-                                ))}
+            <form onSubmit={handleSubmit} className="space-y-8">
+                {/* 画像アップロード */}
+                <div className="space-y-2">
+                    <label className="text-xs font-bold text-stone-400 uppercase tracking-widest block">Product Image</label>
+                    <div
+                        onClick={() => fileInputRef.current?.click()}
+                        className="w-full aspect-video bg-stone-50 border-2 border-dashed border-stone-200 rounded-lg flex flex-col items-center justify-center cursor-pointer hover:bg-stone-100 transition-colors relative overflow-hidden group"
+                    >
+                        {previewUrl ? (
+                            <img src={previewUrl} alt="Preview" className="w-full h-full object-contain" />
+                        ) : (
+                            <div className="text-center p-4">
+                                <Upload className="w-8 h-8 text-stone-300 mx-auto mb-2 group-hover:scale-110 transition-transform" />
+                                <p className="text-xs text-stone-400">Click to upload image</p>
                             </div>
                         )}
-
-                        <button
-                            onClick={handleSubmit}
-                            disabled={!formData.title || !formData.price}
-                            className="w-full bg-stone-800 text-white py-4 text-sm tracking-widest hover:bg-stone-700 transition-colors flex items-center justify-center gap-2 mt-4 disabled:opacity-50"
-                        >
-                            <Upload className="w-4 h-4" />
-                            出品する
-                        </button>
+                        <input
+                            ref={fileInputRef}
+                            type="file"
+                            accept="image/*"
+                            className="hidden"
+                            onChange={handleFileChange}
+                        />
                     </div>
                 </div>
-            </div>
+
+                {formData.image && (
+                    <div className="flex justify-end">
+                        <button
+                            type="button"
+                            onClick={handleAnalyzeImage}
+                            disabled={analyzing}
+                            className="flex items-center gap-2 text-xs bg-indigo-50 text-indigo-600 px-4 py-2 rounded-full hover:bg-indigo-100 transition-colors"
+                        >
+                            {analyzing ? <Loader2 className="w-3 h-3 animate-spin" /> : <Wand2 className="w-3 h-3" />}
+                            {analyzing ? "AIが画像を分析中..." : "AIに商品情報を入力してもらう"}
+                        </button>
+                    </div>
+                )}
+
+                {/* 商品名 */}
+                <div className="space-y-1">
+                    <label className="text-xs font-bold text-stone-400 uppercase tracking-widest">Product Name</label>
+                    <div className="flex items-center border-b border-stone-200 py-2 focus-within:border-stone-800 transition-colors">
+                        <Tag className="w-4 h-4 text-stone-400 mr-3" />
+                        <input
+                            type="text"
+                            value={formData.name}
+                            onChange={e => setFormData({...formData, name: e.target.value})}
+                            placeholder="商品名"
+                            className="flex-1 outline-none text-sm bg-transparent w-full"
+                            required
+                        />
+                    </div>
+                </div>
+
+                <div className="flex gap-4">
+                    {/* カテゴリ */}
+                    {/* ★修正: min-w-0 を追加してはみ出しを防止 */}
+                    <div className="flex-1 space-y-1 min-w-0">
+                        <label className="text-xs font-bold text-stone-400 uppercase tracking-widest">Category</label>
+                        <div className="flex items-center border-b border-stone-200 py-2 focus-within:border-stone-800 transition-colors">
+                            <Tag className="w-4 h-4 text-stone-400 mr-3" />
+                            <input
+                                type="text"
+                                placeholder="カテゴリ"
+                                className="flex-1 outline-none text-sm bg-transparent w-full"
+                            />
+                        </div>
+                    </div>
+
+                    {/* 価格 */}
+                    {/* ★修正: min-w-0 を追加してはみ出しを防止 */}
+                    <div className="flex-1 space-y-1 min-w-0">
+                        <label className="text-xs font-bold text-stone-400 uppercase tracking-widest">Price (JPY)</label>
+                        <div className="flex items-center border-b border-stone-200 py-2 focus-within:border-stone-800 transition-colors">
+                            <DollarSign className="w-4 h-4 text-stone-400 mr-3 shrink-0" />
+                            <input
+                                type="number"
+                                value={formData.price}
+                                onChange={e => setFormData({...formData, price: e.target.value})}
+                                placeholder="0"
+                                className="flex-1 outline-none text-sm bg-transparent w-full min-w-0"
+                                required
+                            />
+                        </div>
+                    </div>
+                </div>
+
+                {/* 説明文 */}
+                <div className="space-y-1">
+                    <label className="text-xs font-bold text-stone-400 uppercase tracking-widest">Description</label>
+                    <div className="flex items-start border-b border-stone-200 py-2 focus-within:border-stone-800 transition-colors">
+                        <textarea
+                            value={formData.description}
+                            onChange={e => setFormData({...formData, description: e.target.value})}
+                            placeholder="商品の説明、状態など..."
+                            className="flex-1 outline-none text-sm bg-transparent min-h-[100px] resize-none w-full"
+                            required
+                        />
+                    </div>
+                </div>
+
+                <button
+                    type="submit"
+                    disabled={loading}
+                    className="w-full bg-stone-800 text-white py-4 text-sm tracking-widest hover:bg-stone-700 transition-colors disabled:opacity-50 flex items-center justify-center gap-2 mt-8"
+                >
+                    {loading && <Loader2 className="w-4 h-4 animate-spin" />}
+                    LIST ITEM
+                </button>
+            </form>
         </div>
     );
 };
