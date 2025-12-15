@@ -5,7 +5,7 @@ import CraftsmanChat from './CraftsmanChat';
 import Auth from './Auth';
 import SellItem from './SellItem';
 import TradeChat from './TradeChat';
-import { ShoppingBag, RefreshCw, ChevronRight, MessageCircle, Shield, LogOut, Plus, Wrench, MessageSquareText, Heart, Search, Sparkles } from 'lucide-react';
+import { ShoppingBag, RefreshCw, ChevronRight, MessageCircle, Shield, LogOut, Plus, Wrench, MessageSquareText, Heart, Search, Sparkles, User } from 'lucide-react';
 
 const API_BASE_URL = 'https://hackathon-backend-1093557143473.us-central1.run.app';
 
@@ -22,7 +22,7 @@ interface Item {
 
 function App() {
     const [items, setItems] = useState<Item[]>([]);
-    const [showSupportChat, setShowSupportChat] = useState(false);
+    const [showSupportChat, setShowSupportChat] = useState(false); // 職人チャットの開閉スイッチ
     const [selectedItemForChat, setSelectedItemForChat] = useState<Item | null>(null);
 
     const [user, setUser] = useState<any>(null);
@@ -185,9 +185,19 @@ function App() {
                     </form>
 
                     <nav className="flex items-center gap-4 text-sm tracking-wide text-stone-600 shrink-0">
-                        <span className="text-[10px] text-stone-400 uppercase tracking-wider hidden md:inline">
-                            Welcome, {user?.name}
-                        </span>
+
+                        {/* ★変更: 職人チャットボタンを目立たせました */}
+                        <button
+                            onClick={() => setShowSupportChat(!showSupportChat)}
+                            className={`flex items-center gap-2 px-3 py-1.5 rounded-full transition-all border ${
+                                showSupportChat
+                                    ? 'bg-stone-800 text-white border-stone-800'
+                                    : 'bg-white border-stone-200 hover:border-stone-400 text-stone-600'
+                            }`}
+                        >
+                            <MessageCircle className="w-4 h-4" />
+                            <span className="text-xs font-bold hidden md:inline">職人に相談</span>
+                        </button>
 
                         <button
                             onClick={() => setView('sell')}
@@ -195,10 +205,6 @@ function App() {
                         >
                             <Plus className="w-3 h-3" />
                             <span className="text-xs font-bold tracking-widest uppercase hidden md:inline">Sell</span>
-                        </button>
-
-                        <button onClick={() => setShowSupportChat(!showSupportChat)} className="flex items-center gap-2 hover:text-stone-900 transition-colors">
-                            <MessageCircle className="w-4 h-4" />
                         </button>
 
                         <button onClick={handleLogout} className="flex items-center gap-1 hover:text-red-500 transition-colors" title="ログアウト">
@@ -210,12 +216,24 @@ function App() {
 
             <main className="max-w-4xl mx-auto px-6 py-16 space-y-24">
 
+                {/* ユーザー同士の取引チャット */}
                 {selectedItemForChat && (
                     <TradeChat
                         item={selectedItemForChat}
                         currentUserId={user?.id}
                         onClose={() => setSelectedItemForChat(null)}
                     />
+                )}
+
+                {/* ★職人チャットの表示エリア (z-indexを上げて手前に表示) */}
+                {showSupportChat && (
+                    <div className="fixed bottom-6 right-6 z-[100] w-80 shadow-2xl animate-in slide-in-from-bottom-10 border border-stone-200 rounded-lg overflow-hidden">
+                        <div className="bg-stone-800 text-white p-2 flex justify-between items-center cursor-pointer" onClick={() => setShowSupportChat(false)}>
+                            <span className="text-xs font-bold tracking-widest pl-2">CRAFTSMAN SUPPORT</span>
+                            <button onClick={(e) => { e.stopPropagation(); setShowSupportChat(false); }} className="px-2 hover:text-stone-300">×</button>
+                        </div>
+                        <CraftsmanChat />
+                    </div>
                 )}
 
                 {view === 'sell' ? (
@@ -245,16 +263,6 @@ function App() {
                     </div>
                 ) : (
                     <>
-                        {showSupportChat && (
-                            <div className="fixed bottom-24 right-6 z-50 w-80 shadow-2xl animate-in slide-in-from-bottom-10 border border-stone-200 rounded-lg overflow-hidden">
-                                <div className="bg-stone-800 text-white p-2 flex justify-between items-center">
-                                    <span className="text-xs font-bold tracking-widest pl-2">CRAFTSMAN SUPPORT</span>
-                                    <button onClick={() => setShowSupportChat(false)} className="px-2 hover:text-stone-300">×</button>
-                                </div>
-                                <CraftsmanChat />
-                            </div>
-                        )}
-
                         <section>
                             <div className="flex items-end justify-between mb-8">
                                 <div>
@@ -309,7 +317,6 @@ function App() {
                                                     </span>
                                                 </button>
 
-                                                {/* ★UI改善: 目立つ「AI REPAIRED」バッジの追加 */}
                                                 {(item.description.includes('修復') || item.description.includes('リペア') || item.description.includes('AIリペア')) && (
                                                     <div className="absolute top-3 left-0 bg-gradient-to-r from-rose-500 to-orange-500 text-white text-[10px] font-bold py-1 px-3 shadow-lg z-20 rounded-r-full flex items-center gap-1 animate-in fade-in slide-in-from-left-2 duration-700">
                                                         <Sparkles className="w-3 h-3 text-yellow-200 fill-yellow-200" />
@@ -336,7 +343,6 @@ function App() {
                                                     <span className="text-sm text-stone-600 font-normal">¥{item.price.toLocaleString()}</span>
                                                 </div>
 
-                                                {/* ★UI改善: 説明文を「切れる」状態から「スクロール可能」に変更 */}
                                                 <div className="text-xs text-stone-500 leading-relaxed h-[100px] overflow-y-auto scrollbar-thin scrollbar-thumb-stone-200 pr-2">
                                                     <p className="whitespace-pre-wrap">{item.description}</p>
                                                 </div>
