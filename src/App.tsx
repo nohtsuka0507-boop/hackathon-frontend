@@ -5,7 +5,7 @@ import CraftsmanChat from './CraftsmanChat';
 import Auth from './Auth';
 import SellItem from './SellItem';
 import TradeChat from './TradeChat';
-import { ShoppingBag, RefreshCw, ChevronRight, MessageCircle, Shield, LogOut, Plus, Wrench, MessageSquareText, Heart, Search } from 'lucide-react';
+import { ShoppingBag, RefreshCw, ChevronRight, MessageCircle, Shield, LogOut, Plus, Wrench, MessageSquareText, Heart, Search, Sparkles } from 'lucide-react';
 
 const API_BASE_URL = 'https://hackathon-backend-1093557143473.us-central1.run.app';
 
@@ -31,13 +31,10 @@ function App() {
     const [likedItemIds, setLikedItemIds] = useState<string[]>([]);
     const [searchKeyword, setSearchKeyword] = useState('');
 
-    // ★追加: 出品フォームに渡すデータ
     const [sellFormData, setSellFormData] = useState<any>(null);
 
-    // ★追加: 診断結果を受け取ってフォームへ移動する処理
     const handleSelectListingPlan = (data: any) => {
         setSellFormData(data);
-        // 少し遅延させてからスクロール（UIの更新を待つため）
         setTimeout(() => {
             document.getElementById('sell-form-area')?.scrollIntoView({ behavior: 'smooth' });
         }, 100);
@@ -135,7 +132,7 @@ function App() {
     const handleSellComplete = () => {
         setView('home');
         setSearchKeyword('');
-        setSellFormData(null); // フォームデータをリセット
+        setSellFormData(null);
         fetchItems();
     };
 
@@ -233,16 +230,13 @@ function App() {
                                     <p className="text-xs text-stone-500">出品前に、修復プランと適正価格をAIが診断します。</p>
                                 </div>
                             </div>
-                            {/* ★修正: onSelectPlan を渡す */}
                             <AiRepairShop onSelectPlan={handleSelectListingPlan} />
                         </section>
 
-                        {/* IDを追加してスクロール可能に */}
                         <section id="sell-form-area" className="relative">
                             <div className="absolute -top-10 left-1/2 -translate-x-1/2 bg-stone-200 text-stone-500 text-[10px] px-3 py-1 rounded-full uppercase tracking-widest">
                                 Step 2
                             </div>
-                            {/* ★修正: initialData を渡す */}
                             <SellItem
                                 onComplete={handleSellComplete}
                                 initialData={sellFormData}
@@ -250,7 +244,6 @@ function App() {
                         </section>
                     </div>
                 ) : (
-                    // ... (ホーム画面の表示は変更なし)
                     <>
                         {showSupportChat && (
                             <div className="fixed bottom-24 right-6 z-50 w-80 shadow-2xl animate-in slide-in-from-bottom-10 border border-stone-200 rounded-lg overflow-hidden">
@@ -316,8 +309,16 @@ function App() {
                                                     </span>
                                                 </button>
 
+                                                {/* ★UI改善: 目立つ「AI REPAIRED」バッジの追加 */}
+                                                {(item.description.includes('修復') || item.description.includes('リペア') || item.description.includes('AIリペア')) && (
+                                                    <div className="absolute top-3 left-0 bg-gradient-to-r from-rose-500 to-orange-500 text-white text-[10px] font-bold py-1 px-3 shadow-lg z-20 rounded-r-full flex items-center gap-1 animate-in fade-in slide-in-from-left-2 duration-700">
+                                                        <Sparkles className="w-3 h-3 text-yellow-200 fill-yellow-200" />
+                                                        <span>AI REPAIRED</span>
+                                                    </div>
+                                                )}
+
                                                 {item.has_certificate && (
-                                                    <div className="absolute top-2 left-2 bg-stone-800/80 backdrop-blur text-white text-[10px] px-2 py-1 rounded-sm flex items-center gap-1">
+                                                    <div className="absolute bottom-2 left-2 bg-stone-800/80 backdrop-blur text-white text-[10px] px-2 py-1 rounded-sm flex items-center gap-1">
                                                         <Shield className="w-3 h-3" /> Verified
                                                     </div>
                                                 )}
@@ -334,9 +335,11 @@ function App() {
                                                     <h4 className="text-sm font-medium text-stone-800 line-clamp-1">{item.name}</h4>
                                                     <span className="text-sm text-stone-600 font-normal">¥{item.price.toLocaleString()}</span>
                                                 </div>
-                                                <p className="text-xs text-stone-500 line-clamp-2 leading-relaxed flex-1">
-                                                    {item.description}
-                                                </p>
+
+                                                {/* ★UI改善: 説明文を「切れる」状態から「スクロール可能」に変更 */}
+                                                <div className="text-xs text-stone-500 leading-relaxed h-[100px] overflow-y-auto scrollbar-thin scrollbar-thumb-stone-200 pr-2">
+                                                    <p className="whitespace-pre-wrap">{item.description}</p>
+                                                </div>
 
                                                 {item.has_certificate && (
                                                     <div className="mt-2 mb-2 scale-75 origin-left w-[130%] -ml-[15%]">
@@ -344,7 +347,7 @@ function App() {
                                                     </div>
                                                 )}
 
-                                                <div className="mt-auto flex gap-2">
+                                                <div className="mt-auto flex gap-2 pt-2">
                                                     <button
                                                         onClick={() => setSelectedItemForChat(item)}
                                                         disabled={item.sold_out}
