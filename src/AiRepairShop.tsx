@@ -1,16 +1,24 @@
 import React, { useState } from 'react';
-import { Camera, ArrowRight, Check, Loader2, Wrench, Coins, Star } from 'lucide-react';
+import { Camera, ArrowRight, Loader2, Wrench, Coins, Star, Sparkles } from 'lucide-react';
 
 const API_BASE_URL = 'https://hackathon-backend-1093557143473.us-central1.run.app';
 
-const AiRepairShop = () => {
+// 親コンポーネント(App)にデータを渡すための型定義
+interface AiRepairShopProps {
+    onSelectPlan?: (data: any) => void;
+}
+
+const AiRepairShop: React.FC<AiRepairShopProps> = ({ onSelectPlan }) => {
     const [loading, setLoading] = useState(false);
     const [result, setResult] = useState<any>(null);
     const [preview, setPreview] = useState<string | null>(null);
+    const [uploadedFile, setUploadedFile] = useState<File | null>(null); // 画像ファイルを保持
 
     const handleImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
         const file = e.target.files?.[0];
         if (!file) return;
+
+        setUploadedFile(file); // ファイルを保存
         setPreview(URL.createObjectURL(file));
         setLoading(true);
         setResult(null);
@@ -28,6 +36,29 @@ const AiRepairShop = () => {
             alert("AI診断に失敗しました。");
         } finally {
             setLoading(false);
+        }
+    };
+
+    // プラン選択時の処理
+    const handleSelect = (type: 'repair' | 'as_is') => {
+        if (!result || !onSelectPlan) return;
+
+        if (type === 'repair') {
+            // リペアプラン: 高い価格、説明文にリペア手順を含める
+            onSelectPlan({
+                name: result.item_name,
+                price: result.future_value,
+                description: `【AIリペア推奨商品】\n\n${result.item_name}です。\n\n◆修復プラン\n${result.repair_plan}\n\n※AI診断に基づき、リペアを行うことで価値が高まる商品です。\n\n◆プロのアドバイス\n${result.advice}`,
+                image: uploadedFile // 画像も渡す
+            });
+        } else {
+            // 現状プラン: 安い価格、説明文はダメージ記載のみ
+            onSelectPlan({
+                name: result.item_name,
+                price: result.current_value,
+                description: `${result.item_name}です。\n\n◆状態\n${result.damage_check}\n\n現状品として出品します。`,
+                image: uploadedFile // 画像も渡す
+            });
         }
     };
 
@@ -97,7 +128,7 @@ const AiRepairShop = () => {
                                     <h3 className="text-xl text-stone-900 font-medium leading-snug">{result.item_name}</h3>
                                 </div>
 
-                                {/* メインの金額表示（ここを強調！） */}
+                                {/* メインの金額表示 */}
                                 <div className="bg-stone-50 border border-stone-100 p-6 rounded-sm relative overflow-hidden">
                                     <div className="grid grid-cols-2 gap-8 relative z-10">
                                         <div>
@@ -149,10 +180,32 @@ const AiRepairShop = () => {
                                     </p>
                                 </div>
 
-                                <div className="pt-2">
-                                    <button className="w-full bg-stone-900 text-white py-4 px-6 text-sm tracking-widest hover:bg-stone-700 transition-all shadow-md hover:shadow-lg flex items-center justify-center gap-4 group rounded-sm">
-                                        リペアして出品する
-                                        <ArrowRight className="w-4 h-4 group-hover:translate-x-1 transition-transform" />
+                                {/* アクションボタンエリア */}
+                                <div className="pt-6 space-y-3">
+                                    {/* メイン：リペアして出品 */}
+                                    <button
+                                        onClick={() => handleSelect('repair')}
+                                        className="w-full relative overflow-hidden bg-stone-900 text-white py-4 px-6 text-sm tracking-widest hover:bg-stone-800 transition-all shadow-lg hover:shadow-xl flex items-center justify-center gap-4 group rounded-sm ring-2 ring-offset-2 ring-stone-900"
+                                    >
+                                        <div className="absolute top-0 right-0 -mt-2 -mr-2 w-8 h-8 bg-yellow-400 rotate-45 transform group-hover:scale-150 transition-transform duration-500"></div>
+                                        <div className="flex flex-col items-center leading-none">
+                                            <span className="flex items-center gap-2 font-bold text-lg">
+                                                <Sparkles className="w-4 h-4 text-yellow-400" />
+                                                リペアして高値で出品
+                                            </span>
+                                            <span className="text-[10px] text-stone-400 mt-1 font-normal opacity-80">
+                                                推定利益 ¥{result.estimated_profit?.toLocaleString()} を獲得する
+                                            </span>
+                                        </div>
+                                        <ArrowRight className="w-5 h-5 group-hover:translate-x-1 transition-transform absolute right-6" />
+                                    </button>
+
+                                    {/* サブ：そのまま出品 */}
+                                    <button
+                                        onClick={() => handleSelect('as_is')}
+                                        className="w-full bg-transparent text-stone-400 py-3 px-6 text-xs hover:text-stone-600 transition-colors flex items-center justify-center gap-2 group"
+                                    >
+                                        <span>修理せずに ¥{result.current_value?.toLocaleString()} で出品する</span>
                                     </button>
                                 </div>
                             </div>

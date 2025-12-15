@@ -29,8 +29,19 @@ function App() {
     const [token, setToken] = useState<string | null>(null);
     const [view, setView] = useState<'home' | 'sell'>('home');
     const [likedItemIds, setLikedItemIds] = useState<string[]>([]);
-
     const [searchKeyword, setSearchKeyword] = useState('');
+
+    // ★追加: 出品フォームに渡すデータ
+    const [sellFormData, setSellFormData] = useState<any>(null);
+
+    // ★追加: 診断結果を受け取ってフォームへ移動する処理
+    const handleSelectListingPlan = (data: any) => {
+        setSellFormData(data);
+        // 少し遅延させてからスクロール（UIの更新を待つため）
+        setTimeout(() => {
+            document.getElementById('sell-form-area')?.scrollIntoView({ behavior: 'smooth' });
+        }, 100);
+    };
 
     const fetchItems = async (keyword = '') => {
         try {
@@ -124,6 +135,7 @@ function App() {
     const handleSellComplete = () => {
         setView('home');
         setSearchKeyword('');
+        setSellFormData(null); // フォームデータをリセット
         fetchItems();
     };
 
@@ -160,7 +172,6 @@ function App() {
 
                     <form onSubmit={handleSearch} className="flex-1 max-w-md relative group">
                         <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-stone-400 group-focus-within:text-stone-600 transition-colors" />
-                        {/* ★修正: 入力が空になったら即座に全件取得するように変更 */}
                         <input
                             type="text"
                             value={searchKeyword}
@@ -168,7 +179,7 @@ function App() {
                                 const val = e.target.value;
                                 setSearchKeyword(val);
                                 if (val === '') {
-                                    fetchItems(''); // 空になったら全件表示！
+                                    fetchItems('');
                                 }
                             }}
                             placeholder="何をお探しですか？"
@@ -222,17 +233,24 @@ function App() {
                                     <p className="text-xs text-stone-500">出品前に、修復プランと適正価格をAIが診断します。</p>
                                 </div>
                             </div>
-                            <AiRepairShop />
+                            {/* ★修正: onSelectPlan を渡す */}
+                            <AiRepairShop onSelectPlan={handleSelectListingPlan} />
                         </section>
 
-                        <section className="relative">
+                        {/* IDを追加してスクロール可能に */}
+                        <section id="sell-form-area" className="relative">
                             <div className="absolute -top-10 left-1/2 -translate-x-1/2 bg-stone-200 text-stone-500 text-[10px] px-3 py-1 rounded-full uppercase tracking-widest">
                                 Step 2
                             </div>
-                            <SellItem onComplete={handleSellComplete} />
+                            {/* ★修正: initialData を渡す */}
+                            <SellItem
+                                onComplete={handleSellComplete}
+                                initialData={sellFormData}
+                            />
                         </section>
                     </div>
                 ) : (
+                    // ... (ホーム画面の表示は変更なし)
                     <>
                         {showSupportChat && (
                             <div className="fixed bottom-24 right-6 z-50 w-80 shadow-2xl animate-in slide-in-from-bottom-10 border border-stone-200 rounded-lg overflow-hidden">

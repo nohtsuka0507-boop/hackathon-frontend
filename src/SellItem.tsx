@@ -1,13 +1,14 @@
-import React, { useState, useRef } from 'react';
-import { Camera, Sparkles, Tag, DollarSign, Upload, X, Loader2, Wand2 } from 'lucide-react';
+import React, { useState, useRef, useEffect } from 'react';
+import { Camera, Sparkles, Tag, DollarSign, Upload, Loader2, Wand2 } from 'lucide-react';
 
 const API_BASE_URL = 'https://hackathon-backend-1093557143473.us-central1.run.app';
 
 interface SellItemProps {
     onComplete: () => void;
+    initialData?: any;
 }
 
-const SellItem: React.FC<SellItemProps> = ({ onComplete }) => {
+const SellItem: React.FC<SellItemProps> = ({ onComplete, initialData }) => {
     const [loading, setLoading] = useState(false);
     const [analyzing, setAnalyzing] = useState(false);
     const fileInputRef = useRef<HTMLInputElement>(null);
@@ -19,6 +20,23 @@ const SellItem: React.FC<SellItemProps> = ({ onComplete }) => {
         image: null as File | null
     });
     const [previewUrl, setPreviewUrl] = useState<string | null>(null);
+
+    // AI診断データが渡されたら自動入力
+    useEffect(() => {
+        if (initialData) {
+            setFormData(prev => ({
+                ...prev,
+                name: initialData.name || prev.name,
+                price: initialData.price ? String(initialData.price) : prev.price,
+                description: initialData.description || prev.description,
+                image: initialData.image || prev.image
+            }));
+
+            if (initialData.image) {
+                setPreviewUrl(URL.createObjectURL(initialData.image));
+            }
+        }
+    }, [initialData]);
 
     const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
         if (e.target.files && e.target.files[0]) {
@@ -138,7 +156,8 @@ const SellItem: React.FC<SellItemProps> = ({ onComplete }) => {
                     </div>
                 </div>
 
-                {formData.image && (
+                {/* AI分析ボタン（手動用） */}
+                {formData.image && !initialData && (
                     <div className="flex justify-end">
                         <button
                             type="button"
@@ -149,6 +168,14 @@ const SellItem: React.FC<SellItemProps> = ({ onComplete }) => {
                             {analyzing ? <Loader2 className="w-3 h-3 animate-spin" /> : <Wand2 className="w-3 h-3" />}
                             {analyzing ? "AIが画像を分析中..." : "AIに商品情報を入力してもらう"}
                         </button>
+                    </div>
+                )}
+
+                {/* 自動入力時の通知 */}
+                {initialData && (
+                    <div className="bg-emerald-50 text-emerald-700 p-3 rounded text-xs flex items-center gap-2">
+                        <Sparkles className="w-4 h-4 text-yellow-500" />
+                        AI診断結果からフォームを自動入力しました
                     </div>
                 )}
 
@@ -170,7 +197,6 @@ const SellItem: React.FC<SellItemProps> = ({ onComplete }) => {
 
                 <div className="flex gap-4">
                     {/* カテゴリ */}
-                    {/* ★修正: min-w-0 を追加してはみ出しを防止 */}
                     <div className="flex-1 space-y-1 min-w-0">
                         <label className="text-xs font-bold text-stone-400 uppercase tracking-widest">Category</label>
                         <div className="flex items-center border-b border-stone-200 py-2 focus-within:border-stone-800 transition-colors">
@@ -184,7 +210,6 @@ const SellItem: React.FC<SellItemProps> = ({ onComplete }) => {
                     </div>
 
                     {/* 価格 */}
-                    {/* ★修正: min-w-0 を追加してはみ出しを防止 */}
                     <div className="flex-1 space-y-1 min-w-0">
                         <label className="text-xs font-bold text-stone-400 uppercase tracking-widest">Price (JPY)</label>
                         <div className="flex items-center border-b border-stone-200 py-2 focus-within:border-stone-800 transition-colors">
