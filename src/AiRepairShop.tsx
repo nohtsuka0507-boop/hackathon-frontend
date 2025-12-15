@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Camera, ArrowRight, Loader2, Wrench, Coins, Star, Sparkles } from 'lucide-react';
+import { Camera, ArrowRight, Loader2, Wrench, Coins, Star, Sparkles, Building2, Truck, XCircle, CheckCircle2 } from 'lucide-react';
 
 const API_BASE_URL = 'https://hackathon-backend-1093557143473.us-central1.run.app';
 
@@ -12,13 +12,13 @@ const AiRepairShop: React.FC<AiRepairShopProps> = ({ onSelectPlan }) => {
     const [loading, setLoading] = useState(false);
     const [result, setResult] = useState<any>(null);
     const [preview, setPreview] = useState<string | null>(null);
-    const [uploadedFile, setUploadedFile] = useState<File | null>(null); // 画像ファイルを保持
+    const [uploadedFile, setUploadedFile] = useState<File | null>(null);
 
     const handleImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
         const file = e.target.files?.[0];
         if (!file) return;
 
-        setUploadedFile(file); // ファイルを保存
+        setUploadedFile(file);
         setPreview(URL.createObjectURL(file));
         setLoading(true);
         setResult(null);
@@ -39,30 +39,26 @@ const AiRepairShop: React.FC<AiRepairShopProps> = ({ onSelectPlan }) => {
         }
     };
 
-    // プラン選択時の処理
     const handleSelect = (type: 'repair' | 'as_is') => {
         if (!result || !onSelectPlan) return;
 
         if (type === 'repair') {
-            // リペアプラン: 高い価格、説明文にリペア手順を含める
             onSelectPlan({
                 name: result.item_name,
                 price: result.future_value,
                 description: `【AIリペア推奨商品】\n\n${result.item_name}です。\n\n◆修復プラン\n${result.repair_plan}\n\n※AI診断に基づき、リペアを行うことで価値が高まる商品です。\n\n◆プロのアドバイス\n${result.advice}`,
-                image: uploadedFile // 画像も渡す
+                image: uploadedFile
             });
         } else {
-            // 現状プラン: 安い価格、説明文はダメージ記載のみ
             onSelectPlan({
                 name: result.item_name,
                 price: result.current_value,
                 description: `${result.item_name}です。\n\n◆状態\n${result.damage_check}\n\n現状品として出品します。`,
-                image: uploadedFile // 画像も渡す
+                image: uploadedFile
             });
         }
     };
 
-    // 星評価を表示するヘルパー
     const renderStars = (level: number) => {
         return (
             <div className="flex gap-0.5">
@@ -122,31 +118,57 @@ const AiRepairShop: React.FC<AiRepairShopProps> = ({ onSelectPlan }) => {
                                 <p>写真を選択すると、<br/>診断レポートがここに表示されます。</p>
                             </div>
                         ) : (
-                            <div className="space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-700">
+                            <div className="space-y-6 animate-in fade-in slide-in-from-bottom-4 duration-700">
                                 <div>
                                     <p className="text-[10px] font-bold text-stone-400 uppercase tracking-widest mb-2">Product Name</p>
                                     <h3 className="text-xl text-stone-900 font-medium leading-snug">{result.item_name}</h3>
                                 </div>
 
-                                {/* メインの金額表示 */}
-                                <div className="bg-stone-50 border border-stone-100 p-6 rounded-sm relative overflow-hidden">
-                                    <div className="grid grid-cols-2 gap-8 relative z-10">
-                                        <div>
-                                            <p className="text-[10px] font-bold text-stone-400 uppercase tracking-widest mb-1">Current</p>
-                                            <p className="text-lg font-light text-stone-600 line-through decoration-stone-300">¥{result.current_value?.toLocaleString()}</p>
+                                {/* ★引き立て役作戦: 収益性比較チャート */}
+                                <div className="bg-stone-50 border border-stone-200 rounded-lg p-4 space-y-3">
+                                    <p className="text-[10px] font-bold text-stone-400 uppercase tracking-widest mb-2 text-center">Profitability Analysis</p>
+
+                                    {/* 1. 現状のまま (比較用) */}
+                                    <div className="flex justify-between items-center opacity-50 text-sm">
+                                        <div className="flex items-center gap-2">
+                                            <XCircle className="w-4 h-4 text-stone-400" />
+                                            <span>現状のまま売却</span>
                                         </div>
-                                        <div>
-                                            <p className="text-[10px] font-bold text-emerald-600 uppercase tracking-widest mb-1">After Repair</p>
-                                            <p className="text-2xl font-bold text-emerald-700">¥{result.future_value?.toLocaleString()}</p>
-                                        </div>
+                                        <span className="font-bold">¥{result.current_value?.toLocaleString()}</span>
                                     </div>
 
-                                    {/* 利益表示 */}
-                                    <div className="mt-4 pt-4 border-t border-stone-200 flex justify-between items-center">
-                                        <span className="text-xs font-bold text-stone-500 flex items-center gap-2">
-                                            <Coins className="w-4 h-4" /> 推定利益
+                                    {/* 2. プロに依頼 (引き立て役) */}
+                                    <div className="flex justify-between items-center text-sm bg-white p-2 rounded border border-stone-100 text-stone-500 relative overflow-hidden">
+                                        <div className="flex items-center gap-2 z-10">
+                                            <Building2 className="w-4 h-4" />
+                                            <div className="flex flex-col">
+                                                <span>プロ業者に依頼</span>
+                                                <span className="text-[10px] text-stone-400">
+                                                    費用 ¥{result.pro_service_cost?.toLocaleString()} + 送料 ¥{result.shipping_cost?.toLocaleString()}
+                                                </span>
+                                            </div>
+                                        </div>
+                                        <span className="font-bold z-10">
+                                            {result.pro_profit > 0 ? `¥${result.pro_profit?.toLocaleString()}` : <span className="text-red-400">赤字</span>}
                                         </span>
-                                        <span className="text-xl font-bold text-stone-800 bg-yellow-100 px-3 py-1 rounded-sm border border-yellow-200">
+                                        {/* 赤字なら背景を少し赤く */}
+                                        {result.pro_profit <= 0 && (
+                                            <div className="absolute inset-0 bg-red-50/50 pointer-events-none"></div>
+                                        )}
+                                    </div>
+
+                                    {/* 3. AIリペア (本命！) */}
+                                    <div className="flex justify-between items-center bg-emerald-50 p-3 rounded border border-emerald-200 text-emerald-800 shadow-sm transform scale-105">
+                                        <div className="flex items-center gap-2">
+                                            <Sparkles className="w-4 h-4 text-emerald-600 fill-emerald-600" />
+                                            <div className="flex flex-col leading-none">
+                                                <span className="font-bold text-sm">自分でAIリペア</span>
+                                                <span className="text-[10px] text-emerald-600 mt-1">
+                                                    材料費のみ / 利益最大！
+                                                </span>
+                                            </div>
+                                        </div>
+                                        <span className="text-xl font-bold">
                                             +¥{result.estimated_profit?.toLocaleString()}
                                         </span>
                                     </div>
@@ -164,8 +186,6 @@ const AiRepairShop: React.FC<AiRepairShopProps> = ({ onSelectPlan }) => {
 
                                     <div className="bg-white border border-stone-100 p-4 rounded-sm space-y-3">
                                         <p className="text-sm text-stone-700 leading-relaxed whitespace-pre-wrap">{result.repair_plan}</p>
-
-                                        {/* 必要な道具 */}
                                         <div className="flex flex-wrap gap-2 pt-2">
                                             {result.required_tools?.map((tool: string, i: number) => (
                                                 <span key={i} className="text-[10px] bg-stone-100 text-stone-600 px-2 py-1 rounded-sm border border-stone-200">
@@ -174,15 +194,10 @@ const AiRepairShop: React.FC<AiRepairShopProps> = ({ onSelectPlan }) => {
                                             ))}
                                         </div>
                                     </div>
-
-                                    <p className="text-xs text-stone-500 italic bg-stone-50 p-3 rounded-sm border border-stone-100">
-                                        💡 <span className="font-bold">Advice:</span> {result.advice}
-                                    </p>
                                 </div>
 
                                 {/* アクションボタンエリア */}
-                                <div className="pt-6 space-y-3">
-                                    {/* メイン：リペアして出品 */}
+                                <div className="pt-2 space-y-3">
                                     <button
                                         onClick={() => handleSelect('repair')}
                                         className="w-full relative overflow-hidden bg-stone-900 text-white py-4 px-6 text-sm tracking-widest hover:bg-stone-800 transition-all shadow-lg hover:shadow-xl flex items-center justify-center gap-4 group rounded-sm ring-2 ring-offset-2 ring-stone-900"
@@ -190,17 +205,16 @@ const AiRepairShop: React.FC<AiRepairShopProps> = ({ onSelectPlan }) => {
                                         <div className="absolute top-0 right-0 -mt-2 -mr-2 w-8 h-8 bg-yellow-400 rotate-45 transform group-hover:scale-150 transition-transform duration-500"></div>
                                         <div className="flex flex-col items-center leading-none">
                                             <span className="flex items-center gap-2 font-bold text-lg">
-                                                <Sparkles className="w-4 h-4 text-yellow-400" />
-                                                リペアして高値で出品
+                                                <Wrench className="w-4 h-4 text-yellow-400" />
+                                                自分でリペアして出品
                                             </span>
                                             <span className="text-[10px] text-stone-400 mt-1 font-normal opacity-80">
-                                                推定利益 ¥{result.estimated_profit?.toLocaleString()} を獲得する
+                                                最大利益 ¥{result.estimated_profit?.toLocaleString()} を獲得
                                             </span>
                                         </div>
                                         <ArrowRight className="w-5 h-5 group-hover:translate-x-1 transition-transform absolute right-6" />
                                     </button>
 
-                                    {/* サブ：そのまま出品 */}
                                     <button
                                         onClick={() => handleSelect('as_is')}
                                         className="w-full bg-transparent text-stone-400 py-3 px-6 text-xs hover:text-stone-600 transition-colors flex items-center justify-center gap-2 group"
