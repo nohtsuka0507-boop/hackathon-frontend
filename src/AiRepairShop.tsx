@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Camera, ArrowRight, Check, Loader2 } from 'lucide-react';
+import { Camera, ArrowRight, Check, Loader2, Wrench, Coins, Star } from 'lucide-react';
 
 const API_BASE_URL = 'https://hackathon-backend-1093557143473.us-central1.run.app';
 
@@ -31,6 +31,17 @@ const AiRepairShop = () => {
         }
     };
 
+    // 星評価を表示するヘルパー
+    const renderStars = (level: number) => {
+        return (
+            <div className="flex gap-0.5">
+                {Array(5).fill(0).map((_, i) => (
+                    <Star key={i} className={`w-3 h-3 ${i < level ? "fill-stone-800 text-stone-800" : "text-stone-300"}`} />
+                ))}
+            </div>
+        );
+    };
+
     return (
         <div className="w-full">
             <div className="text-center mb-12">
@@ -43,74 +54,104 @@ const AiRepairShop = () => {
                 </p>
             </div>
 
-            <div className="bg-white border border-stone-200 p-1 md:p-2">
-                <div className="flex flex-col md:flex-row min-h-[500px]">
+            <div className="bg-white border border-stone-200 p-1 md:p-2 shadow-sm">
+                <div className="flex flex-col md:flex-row min-h-[600px]">
 
                     {/* アップロードエリア */}
-                    <div className="md:w-1/2 bg-stone-50 border border-stone-100 relative">
-                        <label className="cursor-pointer w-full h-full flex flex-col items-center justify-center hover:bg-stone-100 transition-colors duration-500">
+                    <div className="md:w-1/2 bg-stone-50 border border-stone-100 relative group overflow-hidden">
+                        <label className="cursor-pointer w-full h-full flex flex-col items-center justify-center hover:bg-stone-100 transition-colors duration-500 z-10 relative">
                             {preview ? (
                                 <img src={preview} alt="preview" className="absolute inset-0 w-full h-full object-contain p-8 mix-blend-multiply" />
                             ) : (
                                 <div className="text-center space-y-4">
-                                    <Camera className="w-8 h-8 text-stone-400 mx-auto stroke-1" />
+                                    <div className="p-4 bg-white rounded-full shadow-sm group-hover:scale-110 transition-transform duration-500">
+                                        <Camera className="w-6 h-6 text-stone-600 stroke-1" />
+                                    </div>
                                     <span className="text-sm text-stone-500 tracking-wide block">写真をアップロード</span>
                                 </div>
                             )}
                             <input type="file" accept="image/*" onChange={handleImageUpload} className="hidden" />
 
                             {loading && (
-                                <div className="absolute inset-0 bg-stone-50/80 flex flex-col items-center justify-center z-10 backdrop-blur-sm">
+                                <div className="absolute inset-0 bg-white/90 flex flex-col items-center justify-center z-20 backdrop-blur-sm">
                                     <Loader2 className="w-8 h-8 text-stone-800 animate-spin mb-4" />
-                                    <p className="text-xs tracking-widest text-stone-800 uppercase">Analyzing</p>
+                                    <p className="text-xs tracking-widest text-stone-800 uppercase animate-pulse">AI Analyzing...</p>
                                 </div>
                             )}
                         </label>
                     </div>
 
                     {/* 診断結果エリア */}
-                    <div className="md:w-1/2 p-8 md:p-12 flex flex-col justify-center border-l border-stone-100">
+                    <div className="md:w-1/2 p-8 md:p-10 flex flex-col justify-center border-l border-stone-100 bg-white relative">
                         {!result ? (
-                            <div className="text-center text-stone-400 font-light text-sm">
-                                写真を選択すると、<br/>診断レポートがここに表示されます。
+                            <div className="text-center text-stone-400 font-light text-sm flex flex-col items-center gap-4">
+                                <div className="w-12 h-12 border border-dashed border-stone-300 rounded-full flex items-center justify-center">
+                                    <Wrench className="w-5 h-5 text-stone-300" />
+                                </div>
+                                <p>写真を選択すると、<br/>診断レポートがここに表示されます。</p>
                             </div>
                         ) : (
-                            <div className="space-y-8 animate-in fade-in duration-700">
+                            <div className="space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-700">
                                 <div>
-                                    <p className="text-xs font-bold text-stone-400 uppercase tracking-widest mb-1">Product</p>
-                                    <h3 className="text-xl text-stone-800 font-normal">{result.item_name}</h3>
+                                    <p className="text-[10px] font-bold text-stone-400 uppercase tracking-widest mb-2">Product Name</p>
+                                    <h3 className="text-xl text-stone-900 font-medium leading-snug">{result.item_name}</h3>
                                 </div>
 
-                                <div className="grid grid-cols-2 gap-8 py-6 border-y border-stone-200">
-                                    <div>
-                                        <p className="text-xs font-bold text-stone-400 uppercase tracking-widest mb-2">Current</p>
-                                        <p className="text-2xl font-light text-stone-800">¥{result.current_value.toLocaleString()}</p>
-                                        <p className="text-xs text-stone-500 mt-1">現状の価値</p>
+                                {/* メインの金額表示（ここを強調！） */}
+                                <div className="bg-stone-50 border border-stone-100 p-6 rounded-sm relative overflow-hidden">
+                                    <div className="grid grid-cols-2 gap-8 relative z-10">
+                                        <div>
+                                            <p className="text-[10px] font-bold text-stone-400 uppercase tracking-widest mb-1">Current</p>
+                                            <p className="text-lg font-light text-stone-600 line-through decoration-stone-300">¥{result.current_value?.toLocaleString()}</p>
+                                        </div>
+                                        <div>
+                                            <p className="text-[10px] font-bold text-emerald-600 uppercase tracking-widest mb-1">After Repair</p>
+                                            <p className="text-2xl font-bold text-emerald-700">¥{result.future_value?.toLocaleString()}</p>
+                                        </div>
                                     </div>
-                                    <div>
-                                        <p className="text-xs font-bold text-stone-400 uppercase tracking-widest mb-2">Potential</p>
-                                        <p className="text-2xl font-light text-stone-800">¥{result.future_value.toLocaleString()}</p>
-                                        <p className="text-xs text-stone-500 mt-1">リペア後の価値</p>
+
+                                    {/* 利益表示 */}
+                                    <div className="mt-4 pt-4 border-t border-stone-200 flex justify-between items-center">
+                                        <span className="text-xs font-bold text-stone-500 flex items-center gap-2">
+                                            <Coins className="w-4 h-4" /> 推定利益
+                                        </span>
+                                        <span className="text-xl font-bold text-stone-800 bg-yellow-100 px-3 py-1 rounded-sm border border-yellow-200">
+                                            +¥{result.estimated_profit?.toLocaleString()}
+                                        </span>
                                     </div>
                                 </div>
 
-                                <div>
-                                    <p className="text-xs font-bold text-stone-400 uppercase tracking-widest mb-3">Repair Plan</p>
-                                    <ul className="space-y-2">
-                                        <li className="flex items-start gap-3 text-sm text-stone-700">
-                                            <Check className="w-4 h-4 text-stone-400 mt-0.5 flex-shrink-0" />
-                                            {result.repair_plan}
-                                        </li>
-                                        <li className="flex items-start gap-3 text-sm text-stone-700">
-                                            <Check className="w-4 h-4 text-stone-400 mt-0.5 flex-shrink-0" />
-                                            想定コスト: ¥{result.repair_cost.toLocaleString()}
-                                        </li>
-                                    </ul>
+                                {/* 修理プラン */}
+                                <div className="space-y-4">
+                                    <div className="flex justify-between items-center">
+                                        <p className="text-[10px] font-bold text-stone-400 uppercase tracking-widest">Repair Plan</p>
+                                        <div className="flex items-center gap-2 bg-stone-100 px-2 py-1 rounded-full">
+                                            <span className="text-[10px] text-stone-500">難易度</span>
+                                            {renderStars(result.difficulty || 1)}
+                                        </div>
+                                    </div>
+
+                                    <div className="bg-white border border-stone-100 p-4 rounded-sm space-y-3">
+                                        <p className="text-sm text-stone-700 leading-relaxed whitespace-pre-wrap">{result.repair_plan}</p>
+
+                                        {/* 必要な道具 */}
+                                        <div className="flex flex-wrap gap-2 pt-2">
+                                            {result.required_tools?.map((tool: string, i: number) => (
+                                                <span key={i} className="text-[10px] bg-stone-100 text-stone-600 px-2 py-1 rounded-sm border border-stone-200">
+                                                    {tool}
+                                                </span>
+                                            ))}
+                                        </div>
+                                    </div>
+
+                                    <p className="text-xs text-stone-500 italic bg-stone-50 p-3 rounded-sm border border-stone-100">
+                                        💡 <span className="font-bold">Advice:</span> {result.advice}
+                                    </p>
                                 </div>
 
-                                <div className="pt-4">
-                                    <button className="w-full bg-stone-800 text-white py-4 px-6 text-sm tracking-widest hover:bg-stone-700 transition-colors flex items-center justify-center gap-4 group">
-                                        リペアを依頼する
+                                <div className="pt-2">
+                                    <button className="w-full bg-stone-900 text-white py-4 px-6 text-sm tracking-widest hover:bg-stone-700 transition-all shadow-md hover:shadow-lg flex items-center justify-center gap-4 group rounded-sm">
+                                        リペアして出品する
                                         <ArrowRight className="w-4 h-4 group-hover:translate-x-1 transition-transform" />
                                     </button>
                                 </div>
