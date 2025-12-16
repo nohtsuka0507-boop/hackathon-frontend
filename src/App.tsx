@@ -5,7 +5,7 @@ import CraftsmanChat from './CraftsmanChat';
 import Auth from './Auth';
 import SellItem from './SellItem';
 import TradeChat from './TradeChat';
-import { ShoppingBag, RefreshCw, ChevronRight, MessageCircle, Shield, LogOut, Plus, Wrench, MessageSquareText, Heart, Search, Sparkles, User } from 'lucide-react';
+import { ShoppingBag, RefreshCw, ChevronRight, MessageCircle, Shield, LogOut, Plus, Wrench, MessageSquareText, Heart, Search, Sparkles, User, ChevronDown, ChevronUp } from 'lucide-react';
 
 const API_BASE_URL = 'https://hackathon-backend-1093557143473.us-central1.run.app';
 
@@ -22,7 +22,7 @@ interface Item {
 
 function App() {
     const [items, setItems] = useState<Item[]>([]);
-    const [showSupportChat, setShowSupportChat] = useState(false); // 職人チャットの開閉スイッチ
+    const [showSupportChat, setShowSupportChat] = useState(false);
     const [selectedItemForChat, setSelectedItemForChat] = useState<Item | null>(null);
 
     const [user, setUser] = useState<any>(null);
@@ -32,6 +32,18 @@ function App() {
     const [searchKeyword, setSearchKeyword] = useState('');
 
     const [sellFormData, setSellFormData] = useState<any>(null);
+
+    // ★追加: どのアコーディオンが開いているか管理
+    const [expandedRepairPlanId, setExpandedRepairPlanId] = useState<string | null>(null);
+
+    // ★追加: 説明文をパースする関数
+    const parseDescription = (desc: string) => {
+        const parts = desc.split('----------');
+        return {
+            main: parts[0].trim(),
+            repairPlan: parts.length > 1 ? parts[1].trim() : null
+        };
+    };
 
     const handleSelectListingPlan = (data: any) => {
         setSellFormData(data);
@@ -214,7 +226,6 @@ function App() {
 
             <main className="max-w-4xl mx-auto px-6 py-16 space-y-24">
 
-                {/* ユーザー同士の取引チャット */}
                 {selectedItemForChat && (
                     <TradeChat
                         item={selectedItemForChat}
@@ -223,7 +234,6 @@ function App() {
                     />
                 )}
 
-                {/* 職人チャット */}
                 {showSupportChat && (
                     <div className="fixed bottom-6 right-6 z-[100] w-80 shadow-2xl animate-in slide-in-from-bottom-10 border border-stone-200 rounded-lg overflow-hidden">
                         <div className="bg-stone-800 text-white p-2 flex justify-between items-center cursor-pointer" onClick={() => setShowSupportChat(false)}>
@@ -281,124 +291,133 @@ function App() {
                                 </div>
                             ) : (
                                 <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
-                                    {items.map((item) => (
-                                        <div key={item.id} className="group bg-white flex flex-col h-full relative border border-stone-100 transition hover:shadow-lg">
-                                            <div className="aspect-square bg-stone-100 relative overflow-hidden mb-4 cursor-pointer">
-                                                {item.image_url ? (
-                                                    <img
-                                                        src={item.image_url}
-                                                        alt={item.name}
-                                                        loading="lazy"
-                                                        className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105"
-                                                    />
-                                                ) : (
-                                                    <div className="absolute inset-0 flex items-center justify-center text-stone-300">
-                                                        <ShoppingBag className="w-12 h-12 stroke-1" />
-                                                    </div>
-                                                )}
+                                    {items.map((item) => {
+                                        // ★修正: 説明文をパース
+                                        const { main: descriptionMain, repairPlan } = parseDescription(item.description);
+                                        const isRepaired = item.description.includes('修復') || item.description.includes('リペア') || item.description.includes('AIリペア');
+                                        const isExpanded = expandedRepairPlanId === item.id;
 
-                                                <button
-                                                    onClick={(e) => handleToggleLike(item.id, e)}
-                                                    className="absolute top-2 right-2 p-1.5 bg-white/90 backdrop-blur rounded-lg shadow-sm hover:bg-white transition-all z-20 group-hover:scale-110 duration-300 flex flex-col items-center min-w-[32px]"
-                                                >
-                                                    <Heart
-                                                        className={`w-5 h-5 transition-colors mb-0.5 ${
-                                                            likedItemIds.includes(item.id)
-                                                                ? "fill-rose-500 text-rose-500"
-                                                                : "text-stone-400 hover:text-rose-500"
-                                                        }`}
-                                                    />
-                                                    <span className={`text-[9px] font-bold leading-none ${
-                                                        likedItemIds.includes(item.id) ? "text-rose-500" : "text-stone-500"
-                                                    }`}>
-                                                        {item.like_count || 0}
-                                                    </span>
-                                                </button>
-
-                                                {(item.description.includes('修復') || item.description.includes('リペア') || item.description.includes('AIリペア')) && (
-                                                    <div className="absolute top-3 left-0 bg-gradient-to-r from-rose-500 to-orange-500 text-white text-[10px] font-bold py-1 px-3 shadow-lg z-20 rounded-r-full flex items-center gap-1 animate-in fade-in slide-in-from-left-2 duration-700">
-                                                        <Sparkles className="w-3 h-3 text-yellow-200 fill-yellow-200" />
-                                                        <span>AI REPAIRED</span>
-                                                    </div>
-                                                )}
-
-                                                {item.has_certificate && (
-                                                    <div className="absolute bottom-2 left-2 bg-stone-800/80 backdrop-blur text-white text-[10px] px-2 py-1 rounded-sm flex items-center gap-1">
-                                                        <Shield className="w-3 h-3" /> Verified
-                                                    </div>
-                                                )}
-
-                                                {item.sold_out && (
-                                                    <div className="absolute inset-0 bg-stone-50/80 flex items-center justify-center z-10">
-                                                        <span className="text-stone-400 tracking-widest text-sm border border-stone-400 px-3 py-1">SOLD OUT</span>
-                                                    </div>
-                                                )}
-                                            </div>
-
-                                            <div className="p-4 pt-0 space-y-3 flex-1 flex flex-col">
-                                                <div className="flex justify-between items-baseline">
-                                                    <h4 className="text-sm font-medium text-stone-800 line-clamp-1">{item.name}</h4>
-                                                    <span className="text-sm text-stone-600 font-normal">¥{item.price.toLocaleString()}</span>
-                                                </div>
-
-                                                <div className="text-xs text-stone-500 leading-relaxed h-[100px] overflow-y-auto scrollbar-thin scrollbar-thumb-stone-200 pr-2">
-                                                    <p className="whitespace-pre-wrap">{item.description}</p>
-                                                </div>
-
-                                                {item.has_certificate && (
-                                                    <div className="mt-2 mb-2 scale-75 origin-left w-[130%] -ml-[15%]">
-                                                        <DigitalCertificate itemName={item.name} date="2024.11.27" />
-                                                    </div>
-                                                )}
-
-                                                {/* ★追加: リペアレシピのチラ見せ（購入意欲をそそる） */}
-                                                {(!item.sold_out && (item.description.includes('修復') || item.description.includes('リペア'))) && (
-                                                    <div className="mt-3 bg-indigo-50 border border-indigo-100 p-3 rounded-md animate-in fade-in duration-500">
-                                                        <div className="flex items-center gap-2 mb-1">
-                                                            <Wrench className="w-3 h-3 text-indigo-600" />
-                                                            <span className="text-[10px] font-bold text-indigo-700 tracking-wider uppercase">DIY Potential</span>
+                                        return (
+                                            <div key={item.id} className="group bg-white flex flex-col h-full relative border border-stone-100 transition hover:shadow-lg">
+                                                <div className="aspect-square bg-stone-100 relative overflow-hidden mb-4 cursor-pointer">
+                                                    {item.image_url ? (
+                                                        <img
+                                                            src={item.image_url}
+                                                            alt={item.name}
+                                                            loading="lazy"
+                                                            className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105"
+                                                        />
+                                                    ) : (
+                                                        <div className="absolute inset-0 flex items-center justify-center text-stone-300">
+                                                            <ShoppingBag className="w-12 h-12 stroke-1" />
                                                         </div>
-                                                        <p className="text-[10px] text-indigo-800 leading-relaxed">
-                                                            この商品はリペア可能です。<br/>
-                                                            <span className="font-bold border-b border-indigo-300 cursor-pointer">購入して、あなたの手で価値を再生しませんか？</span>
-                                                        </p>
+                                                    )}
+
+                                                    <button
+                                                        onClick={(e) => handleToggleLike(item.id, e)}
+                                                        className="absolute top-2 right-2 p-1.5 bg-white/90 backdrop-blur rounded-lg shadow-sm hover:bg-white transition-all z-20 group-hover:scale-110 duration-300 flex flex-col items-center min-w-[32px]"
+                                                    >
+                                                        <Heart
+                                                            className={`w-5 h-5 transition-colors mb-0.5 ${
+                                                                likedItemIds.includes(item.id)
+                                                                    ? "fill-rose-500 text-rose-500"
+                                                                    : "text-stone-400 hover:text-rose-500"
+                                                            }`}
+                                                        />
+                                                        <span className={`text-[9px] font-bold leading-none ${
+                                                            likedItemIds.includes(item.id) ? "text-rose-500" : "text-stone-500"
+                                                        }`}>
+                                                            {item.like_count || 0}
+                                                        </span>
+                                                    </button>
+
+                                                    {/* リペア済みバッジ */}
+                                                    {isRepaired && (
+                                                        <div className="absolute top-3 left-0 bg-gradient-to-r from-orange-500 to-rose-500 text-white text-[10px] font-bold py-1.5 px-3 rounded-r-full shadow-lg z-20 flex items-center gap-1 animate-in fade-in slide-in-from-left-2 duration-700 border border-white/20">
+                                                            <Sparkles className="w-3 h-3 text-yellow-200 fill-yellow-200" />
+                                                            <span className="tracking-widest">AI REPAIRED</span>
+                                                        </div>
+                                                    )}
+
+                                                    {item.sold_out && (
+                                                        <div className="absolute inset-0 bg-stone-50/80 flex items-center justify-center z-10">
+                                                            <span className="text-stone-400 tracking-widest text-sm border border-stone-400 px-3 py-1">SOLD OUT</span>
+                                                        </div>
+                                                    )}
+                                                </div>
+
+                                                <div className="p-4 pt-0 space-y-3 flex-1 flex flex-col">
+                                                    <div className="flex justify-between items-baseline">
+                                                        <h4 className="text-sm font-medium text-stone-800 line-clamp-1">{item.name}</h4>
+                                                        <span className="text-sm text-stone-600 font-normal">¥{item.price.toLocaleString()}</span>
                                                     </div>
-                                                )}
 
-                                                <div className="mt-auto flex gap-2 pt-2">
-                                                    <button
-                                                        onClick={() => setSelectedItemForChat(item)}
-                                                        disabled={item.sold_out}
-                                                        className={`
-                                                            p-3 border border-stone-200 text-stone-600 hover:bg-stone-50 hover:text-stone-800 transition-colors
-                                                            ${item.sold_out ? 'opacity-50 cursor-not-allowed' : ''}
-                                                        `}
-                                                        title="出品者とチャット"
-                                                    >
-                                                        <MessageSquareText className="w-4 h-4" />
-                                                    </button>
+                                                    {/* ★修正: メインの説明文のみ表示 */}
+                                                    <div className="text-xs text-stone-500 leading-relaxed h-[80px] overflow-y-auto scrollbar-thin scrollbar-thumb-stone-200 pr-1 border border-transparent hover:border-stone-100 rounded p-1 transition-colors">
+                                                        <p className="whitespace-pre-wrap">{descriptionMain}</p>
+                                                    </div>
 
-                                                    <button
-                                                        onClick={() => handlePurchase(item)}
-                                                        disabled={item.sold_out}
-                                                        className={`
-                                                            flex-1 py-3 text-xs tracking-widest border transition-all duration-300 flex items-center justify-center gap-2
-                                                            ${item.sold_out
-                                                            ? 'border-stone-200 text-stone-300 cursor-not-allowed'
-                                                            : 'border-stone-300 text-stone-600 hover:bg-stone-800 hover:text-white hover:border-stone-800'
-                                                        }
-                                                        `}
-                                                    >
-                                                        {item.sold_out ? '売り切れ' : (
-                                                            <>
-                                                                購入へ <ChevronRight className="w-3 h-3" />
-                                                            </>
-                                                        )}
-                                                    </button>
+                                                    {/* ★修正: リペアプラン表示ボタン */}
+                                                    {repairPlan && (
+                                                        <div className="mt-2">
+                                                            <button
+                                                                onClick={() => setExpandedRepairPlanId(isExpanded ? null : item.id)}
+                                                                className={`w-full text-[10px] py-2 px-3 rounded flex items-center justify-between transition-colors ${
+                                                                    isRepaired
+                                                                        ? "bg-rose-50 text-rose-700 hover:bg-rose-100"
+                                                                        : "bg-indigo-50 text-indigo-700 hover:bg-indigo-100"
+                                                                }`}
+                                                            >
+                                                                <span className="flex items-center gap-2 font-bold">
+                                                                    {isRepaired ? <Wrench className="w-3 h-3" /> : <Sparkles className="w-3 h-3" />}
+                                                                    {isRepaired ? "実施したリペア内容を見る" : "AIのリペア提案を見る"}
+                                                                </span>
+                                                                {isExpanded ? <ChevronUp className="w-3 h-3" /> : <ChevronDown className="w-3 h-3" />}
+                                                            </button>
+
+                                                            {isExpanded && (
+                                                                <div className="mt-2 p-3 bg-stone-50 border border-stone-200 rounded text-xs text-stone-600 animate-in slide-in-from-top-2">
+                                                                    <p className="whitespace-pre-wrap">{repairPlan}</p>
+                                                                </div>
+                                                            )}
+                                                        </div>
+                                                    )}
+
+                                                    <div className="mt-auto flex gap-2 pt-2">
+                                                        <button
+                                                            onClick={() => setSelectedItemForChat(item)}
+                                                            disabled={item.sold_out}
+                                                            className={`
+                                                                p-3 border border-stone-200 text-stone-600 hover:bg-stone-50 hover:text-stone-800 transition-colors
+                                                                ${item.sold_out ? 'opacity-50 cursor-not-allowed' : ''}
+                                                            `}
+                                                            title="出品者とチャット"
+                                                        >
+                                                            <MessageSquareText className="w-4 h-4" />
+                                                        </button>
+
+                                                        <button
+                                                            onClick={() => handlePurchase(item)}
+                                                            disabled={item.sold_out}
+                                                            className={`
+                                                                flex-1 py-3 text-xs tracking-widest border transition-all duration-300 flex items-center justify-center gap-2
+                                                                ${item.sold_out
+                                                                ? 'border-stone-200 text-stone-300 cursor-not-allowed'
+                                                                : 'border-stone-300 text-stone-600 hover:bg-stone-800 hover:text-white hover:border-stone-800'
+                                                            }
+                                                            `}
+                                                        >
+                                                            {item.sold_out ? '売り切れ' : (
+                                                                <>
+                                                                    購入へ <ChevronRight className="w-3 h-3" />
+                                                                </>
+                                                            )}
+                                                        </button>
+                                                    </div>
                                                 </div>
                                             </div>
-                                        </div>
-                                    ))}
+                                        );
+                                    })}
                                 </div>
                             )}
                         </section>

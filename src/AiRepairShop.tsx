@@ -1,9 +1,8 @@
 import React, { useState } from 'react';
-import { Camera, ArrowRight, Loader2, Wrench, Coins, Star, Sparkles, Building2, Truck, XCircle, CheckCircle2 } from 'lucide-react';
+import { Camera, ArrowRight, Loader2, Wrench, Coins, Star, Sparkles, Building2, XCircle } from 'lucide-react';
 
 const API_BASE_URL = 'https://hackathon-backend-1093557143473.us-central1.run.app';
 
-// 親コンポーネント(App)にデータを渡すための型定義
 interface AiRepairShopProps {
     onSelectPlan?: (data: any) => void;
 }
@@ -42,18 +41,21 @@ const AiRepairShop: React.FC<AiRepairShopProps> = ({ onSelectPlan }) => {
     const handleSelect = (type: 'repair' | 'as_is') => {
         if (!result || !onSelectPlan) return;
 
+        // ★修正ポイント: 区切り線 (----------) を使って、人間が読む説明と、ボタンで開く詳細情報を分ける
         if (type === 'repair') {
             onSelectPlan({
                 name: result.item_name,
                 price: result.future_value,
-                description: `【AIリペア推奨商品】\n\n${result.item_name}です。\n\n◆修復プラン\n${result.repair_plan}\n\n※AI診断に基づき、リペアを行うことで価値が高まる商品です。\n\n◆プロのアドバイス\n${result.advice}`,
+                // リペア済みの場合: 前半はアピール、後半に作業ログ
+                description: `【AIリペア実施済み】\n\n${result.item_name}です。\nAI診断に基づき、適切なリペアを行いました。\n\n◆プロのアドバイス\n${result.advice}\n\n----------\n◆実施したリペア内容\n${result.repair_plan}\n\n◆使用した道具\n${result.required_tools?.join(', ')}`,
                 image: uploadedFile
             });
         } else {
             onSelectPlan({
                 name: result.item_name,
                 price: result.current_value,
-                description: `${result.item_name}です。\n\n◆状態\n${result.damage_check}\n\n現状品として出品します。`,
+                // そのまま出品の場合: 前半は状態、後半にAIの提案（レシピ）
+                description: `${result.item_name}です。\n\n◆状態\n${result.damage_check}\n\n現状品として出品します。ご自身でリペアに挑戦したい方におすすめです。\n\n----------\n◆AIによるリペア提案（DIYレシピ）\n${result.repair_plan}\n\n◆必要な道具\n${result.required_tools?.join(', ')}\n\n※この商品は現状渡しです。上記はAIが提案する「もし直すなら」のプランであり、実施はされていません。`,
                 image: uploadedFile
             });
         }
@@ -124,11 +126,10 @@ const AiRepairShop: React.FC<AiRepairShopProps> = ({ onSelectPlan }) => {
                                     <h3 className="text-xl text-stone-900 font-medium leading-snug">{result.item_name}</h3>
                                 </div>
 
-                                {/* ★引き立て役作戦: 収益性比較チャート */}
+                                {/* 収益性比較チャート */}
                                 <div className="bg-stone-50 border border-stone-200 rounded-lg p-4 space-y-3">
                                     <p className="text-[10px] font-bold text-stone-400 uppercase tracking-widest mb-2 text-center">Profitability Analysis</p>
 
-                                    {/* 1. 現状のまま (比較用) */}
                                     <div className="flex justify-between items-center opacity-50 text-sm">
                                         <div className="flex items-center gap-2">
                                             <XCircle className="w-4 h-4 text-stone-400" />
@@ -137,7 +138,6 @@ const AiRepairShop: React.FC<AiRepairShopProps> = ({ onSelectPlan }) => {
                                         <span className="font-bold">¥{result.current_value?.toLocaleString()}</span>
                                     </div>
 
-                                    {/* 2. プロに依頼 (引き立て役) */}
                                     <div className="flex justify-between items-center text-sm bg-white p-2 rounded border border-stone-100 text-stone-500 relative overflow-hidden">
                                         <div className="flex items-center gap-2 z-10">
                                             <Building2 className="w-4 h-4" />
@@ -151,13 +151,8 @@ const AiRepairShop: React.FC<AiRepairShopProps> = ({ onSelectPlan }) => {
                                         <span className="font-bold z-10">
                                             {result.pro_profit > 0 ? `¥${result.pro_profit?.toLocaleString()}` : <span className="text-red-400">赤字</span>}
                                         </span>
-                                        {/* 赤字なら背景を少し赤く */}
-                                        {result.pro_profit <= 0 && (
-                                            <div className="absolute inset-0 bg-red-50/50 pointer-events-none"></div>
-                                        )}
                                     </div>
 
-                                    {/* 3. AIリペア (本命！) */}
                                     <div className="flex justify-between items-center bg-emerald-50 p-3 rounded border border-emerald-200 text-emerald-800 shadow-sm transform scale-105">
                                         <div className="flex items-center gap-2">
                                             <Sparkles className="w-4 h-4 text-emerald-600 fill-emerald-600" />
@@ -196,7 +191,7 @@ const AiRepairShop: React.FC<AiRepairShopProps> = ({ onSelectPlan }) => {
                                     </div>
                                 </div>
 
-                                {/* アクションボタンエリア */}
+                                {/* アクションボタン */}
                                 <div className="pt-2 space-y-3">
                                     <button
                                         onClick={() => handleSelect('repair')}
