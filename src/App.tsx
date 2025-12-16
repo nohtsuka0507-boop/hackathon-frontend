@@ -38,6 +38,7 @@ function App() {
 
     // ★追加: 説明文をパースする関数
     const parseDescription = (desc: string) => {
+        // 区切り線で分割
         const parts = desc.split('----------');
         return {
             main: parts[0].trim(),
@@ -292,9 +293,10 @@ function App() {
                             ) : (
                                 <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
                                     {items.map((item) => {
-                                        // ★修正: 説明文をパース
+                                        // 説明文を分割
                                         const { main: descriptionMain, repairPlan } = parseDescription(item.description);
-                                        const isRepaired = item.description.includes('修復') || item.description.includes('リペア') || item.description.includes('AIリペア');
+                                        // リペア済み判定（【AIリペア実施済み】という文字列があるかどうか）
+                                        const isRepaired = item.description.includes('【AIリペア実施済み】');
                                         const isExpanded = expandedRepairPlanId === item.id;
 
                                         return (
@@ -339,6 +341,12 @@ function App() {
                                                         </div>
                                                     )}
 
+                                                    {item.has_certificate && (
+                                                        <div className="absolute bottom-2 left-2 bg-stone-800/80 backdrop-blur text-white text-[10px] px-2 py-1 rounded-sm flex items-center gap-1">
+                                                            <Shield className="w-3 h-3" /> Verified
+                                                        </div>
+                                                    )}
+
                                                     {item.sold_out && (
                                                         <div className="absolute inset-0 bg-stone-50/80 flex items-center justify-center z-10">
                                                             <span className="text-stone-400 tracking-widest text-sm border border-stone-400 px-3 py-1">SOLD OUT</span>
@@ -352,7 +360,7 @@ function App() {
                                                         <span className="text-sm text-stone-600 font-normal">¥{item.price.toLocaleString()}</span>
                                                     </div>
 
-                                                    {/* ★修正: メインの説明文のみ表示 */}
+                                                    {/* メイン説明文 (スクロール化) */}
                                                     <div className="text-xs text-stone-500 leading-relaxed h-[80px] overflow-y-auto scrollbar-thin scrollbar-thumb-stone-200 pr-1 border border-transparent hover:border-stone-100 rounded p-1 transition-colors">
                                                         <p className="whitespace-pre-wrap">{descriptionMain}</p>
                                                     </div>
@@ -376,10 +384,23 @@ function App() {
                                                             </button>
 
                                                             {isExpanded && (
-                                                                <div className="mt-2 p-3 bg-stone-50 border border-stone-200 rounded text-xs text-stone-600 animate-in slide-in-from-top-2">
+                                                                <div className="mt-2 p-3 bg-stone-50 border border-stone-200 rounded text-xs text-stone-600 animate-in slide-in-from-top-2 shadow-inner">
                                                                     <p className="whitespace-pre-wrap">{repairPlan}</p>
                                                                 </div>
                                                             )}
+                                                        </div>
+                                                    )}
+
+                                                    {/* ★修正: DIY Potentialボタンは「未リペア」かつ「売れてない」時だけ出す */}
+                                                    {(!item.sold_out && !isRepaired && repairPlan) && (
+                                                        <div className="mt-2 bg-indigo-50 border border-indigo-100 p-2 rounded-md animate-in fade-in duration-500">
+                                                            <div className="flex items-center gap-2 mb-1">
+                                                                <Wrench className="w-3 h-3 text-indigo-600" />
+                                                                <span className="text-[10px] font-bold text-indigo-700 tracking-wider uppercase">DIY Potential</span>
+                                                            </div>
+                                                            <p className="text-[10px] text-indigo-800 leading-relaxed">
+                                                                リペア可能です。直して価値を再生しませんか？
+                                                            </p>
                                                         </div>
                                                     )}
 

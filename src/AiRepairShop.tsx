@@ -41,20 +41,26 @@ const AiRepairShop: React.FC<AiRepairShopProps> = ({ onSelectPlan }) => {
     const handleSelect = (type: 'repair' | 'as_is') => {
         if (!result || !onSelectPlan) return;
 
-        // ★修正ポイント: 区切り線 (----------) を使って、人間が読む説明と、ボタンで開く詳細情報を分ける
         if (type === 'repair') {
+            // ★リペアして出品: sales_copy（魅力的な説明文）をメインにする
+            // リペアプランは「----------」の後ろ（隠し情報）へ
+            // 判定用に【AIリペア実施済み】という文字列を含める
+            const mainDescription = result.sales_copy
+                ? `【AIリペア実施済み】\n${result.sales_copy}`
+                : `【AIリペア実施済み】\n${result.item_name}です。\nAI診断に基づき、適切なリペアを行いました。`;
+
             onSelectPlan({
                 name: result.item_name,
                 price: result.future_value,
-                // リペア済みの場合: 前半はアピール、後半に作業ログ
-                description: `【AIリペア実施済み】\n\n${result.item_name}です。\nAI診断に基づき、適切なリペアを行いました。\n\n◆プロのアドバイス\n${result.advice}\n\n----------\n◆実施したリペア内容\n${result.repair_plan}\n\n◆使用した道具\n${result.required_tools?.join(', ')}`,
+                description: `${mainDescription}\n\n◆プロのアドバイス\n${result.advice}\n\n----------\n◆実施したリペア内容\n${result.repair_plan}\n\n◆使用した道具\n${result.required_tools?.join(', ')}`,
                 image: uploadedFile
             });
         } else {
+            // ★そのまま出品: ダメージ状態をメインにする
+            // AIリペア提案は「----------」の後ろ（隠し情報）へ
             onSelectPlan({
                 name: result.item_name,
                 price: result.current_value,
-                // そのまま出品の場合: 前半は状態、後半にAIの提案（レシピ）
                 description: `${result.item_name}です。\n\n◆状態\n${result.damage_check}\n\n現状品として出品します。ご自身でリペアに挑戦したい方におすすめです。\n\n----------\n◆AIによるリペア提案（DIYレシピ）\n${result.repair_plan}\n\n◆必要な道具\n${result.required_tools?.join(', ')}\n\n※この商品は現状渡しです。上記はAIが提案する「もし直すなら」のプランであり、実施はされていません。`,
                 image: uploadedFile
             });
