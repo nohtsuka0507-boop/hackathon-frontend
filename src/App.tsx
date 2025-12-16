@@ -185,8 +185,6 @@ function App() {
                     </form>
 
                     <nav className="flex items-center gap-4 text-sm tracking-wide text-stone-600 shrink-0">
-
-                        {/* ★変更: 職人チャットボタンを目立たせました */}
                         <button
                             onClick={() => setShowSupportChat(!showSupportChat)}
                             className={`flex items-center gap-2 px-3 py-1.5 rounded-full transition-all border ${
@@ -225,7 +223,7 @@ function App() {
                     />
                 )}
 
-                {/* ★職人チャットの表示エリア (z-indexを上げて手前に表示) */}
+                {/* 職人チャット */}
                 {showSupportChat && (
                     <div className="fixed bottom-6 right-6 z-[100] w-80 shadow-2xl animate-in slide-in-from-bottom-10 border border-stone-200 rounded-lg overflow-hidden">
                         <div className="bg-stone-800 text-white p-2 flex justify-between items-center cursor-pointer" onClick={() => setShowSupportChat(false)}>
@@ -350,6 +348,20 @@ function App() {
                                                 {item.has_certificate && (
                                                     <div className="mt-2 mb-2 scale-75 origin-left w-[130%] -ml-[15%]">
                                                         <DigitalCertificate itemName={item.name} date="2024.11.27" />
+                                                    </div>
+                                                )}
+
+                                                {/* ★追加: リペアレシピのチラ見せ（購入意欲をそそる） */}
+                                                {(!item.sold_out && (item.description.includes('修復') || item.description.includes('リペア'))) && (
+                                                    <div className="mt-3 bg-indigo-50 border border-indigo-100 p-3 rounded-md animate-in fade-in duration-500">
+                                                        <div className="flex items-center gap-2 mb-1">
+                                                            <Wrench className="w-3 h-3 text-indigo-600" />
+                                                            <span className="text-[10px] font-bold text-indigo-700 tracking-wider uppercase">DIY Potential</span>
+                                                        </div>
+                                                        <p className="text-[10px] text-indigo-800 leading-relaxed">
+                                                            この商品はリペア可能です。<br/>
+                                                            <span className="font-bold border-b border-indigo-300 cursor-pointer">購入して、あなたの手で価値を再生しませんか？</span>
+                                                        </p>
                                                     </div>
                                                 )}
 
